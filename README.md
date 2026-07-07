@@ -38,4 +38,4 @@ Single-user by design: no collaborative editing, no CRDT, no sync server with pl
 
 ## License
 
-TBD
+[MIT](./LICENSE)
