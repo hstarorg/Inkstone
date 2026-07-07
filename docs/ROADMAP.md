@@ -40,7 +40,7 @@ MyVault/
 - [x] 品牌 logo（`docs/assets/logo.svg`）与全平台应用图标（`pnpm tauri icon`）、web favicon —— 计划外提前完成
 - [x] Tailwind + shadcn/ui 接入，基础布局壳（侧栏 + 主区）（Tailwind v4 Vite 插件 + shadcn CLI，radix 基座 / Nova preset）
 - [x] 基础工程化：ESLint + Prettier + rustfmt + clippy，`pnpm check` 一键全查（ESLint 9 flat config + typescript-eslint；`@eslint/create-config` 向导不支持非交互，按官方文档手写）
-- [ ] GitHub Actions：lint + 前后端测试，macOS / Windows / Linux 三平台矩阵构建通过
+- [x] GitHub Actions：lint + 前后端测试，macOS / Windows / Linux 三平台矩阵构建（workflow 已就位，待首次 push 后在线验证）
 
 **验收**：新克隆的仓库按 README 三条命令内能跑起空窗口应用；三平台 CI 绿。
 
@@ -61,7 +61,7 @@ MyVault/
 - [ ] Slash 菜单（`/` 插入块）
 - [ ] 图片：粘贴/拖入 → 存入 `assets/`（内容寻址去重）→ 文档内引用渲染
 - [ ] 标题层级生成文档大纲面板
-- [ ] 中英文界面文案抽离（先只做中文，留 i18n 结构）
+- [ ] 界面文案抽离（全英文，见 AGENTS.md 工程约定；留 i18n 结构）
 
 **验收**：把一篇含图片/表格/代码的真实笔记从 Obsidian 手工搬入，编辑体验无明显缺口。
 

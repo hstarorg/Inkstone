@@ -9,9 +9,8 @@ function App() {
           <span className="text-sm font-semibold">Inkstone</span>
         </div>
         <div className="flex-1 overflow-y-auto px-2 py-1">
-          {/* 文档列表（M1） */}
           <p className="px-2 py-8 text-center text-xs text-muted-foreground">
-            还没有文档
+            No documents yet
           </p>
         </div>
       </aside>
@@ -19,9 +18,9 @@ function App() {
         <div className="flex flex-col items-center gap-4">
           <img src="/logo.svg" alt="Inkstone" className="size-16 rounded-2xl" />
           <p className="text-sm text-muted-foreground">
-            选择左侧文档，或从这里开始
+            Select a document from the sidebar, or start here
           </p>
-          <Button disabled>新建文档</Button>
+          <Button disabled>New document</Button>
         </div>
       </main>
     </div>

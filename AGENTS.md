@@ -19,6 +19,9 @@ Inkstone（砚台）：本地优先、端到端加密的跨平台桌面个人知
 
 ## 工程约定
 
+- **文案一律英文**：UI 界面、日志、错误信息、代码注释全部使用英文。
+- **注释只写必要知识**：仅记录代码本身无法表达的信息（特殊业务规则、约束、已知坑）；禁止解释代码在做什么——代码必须自解释，解释性注释一律不写。
+
 - **项目/工具初始化必须用官方 CLI**（如 `pnpm create tauri-app`、`pnpm dlx shadcn@latest init`、`pnpm create vite`），禁止手写脚手架配置文件冒充初始化产物；**执行任何初始化命令前，先向用户列出具体命令并确认**。
 - 包管理用 pnpm；提交前 `pnpm check`（lint + typecheck + 前后端测试）必须全绿。
 - TypeScript strict 模式；Rust 零 clippy 警告。
