@@ -30,6 +30,8 @@ Single-user by design: no collaborative editing, no CRDT, no sync server with pl
 
 ## Roadmap
 
+Detailed milestones and acceptance criteria: [docs/ROADMAP.md](./docs/ROADMAP.md)
+
 1. Tauri + Tiptap shell: local JSON document read/write, file tree
 2. Plait canvas node: mixed mind map / flowchart / freehand, inline preview + fullscreen edit
 3. SQLite FTS5 full-text search, tags and backlinks
