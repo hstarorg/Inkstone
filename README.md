@@ -17,14 +17,14 @@ Inkstone is a personal knowledge base that keeps your thoughts where they belong
 
 ## Tech stack
 
-| Layer | Choice |
-|---|---|
-| Desktop shell | Tauri 2 (Rust backend) |
-| Editor | Tiptap v3 + React, documents stored as ProseMirror JSON files |
-| Canvas | Plait (mind map + flowchart + freehand), wrapped as a Tiptap node behind a narrow interface |
-| Search & metadata | SQLite (FTS5), rebuildable from source files |
-| Encryption | Argon2id + XChaCha20-Poly1305 (envelope encryption, per-document keys) |
-| Sync | Pluggable `SyncBackend` trait (WebDAV first; S3-compatible and self-hosted later), versioned + conflict copies |
+| Layer             | Choice                                                                                                         |
+| ----------------- | -------------------------------------------------------------------------------------------------------------- |
+| Desktop shell     | Tauri 2 (Rust backend)                                                                                         |
+| Editor            | Tiptap v3 + React, documents stored as ProseMirror JSON files                                                  |
+| Canvas            | Plait (mind map + flowchart + freehand), wrapped as a Tiptap node behind a narrow interface                    |
+| Search & metadata | SQLite (FTS5), rebuildable from source files                                                                   |
+| Encryption        | Argon2id + XChaCha20-Poly1305 (envelope encryption, per-document keys)                                         |
+| Sync              | Pluggable `SyncBackend` trait (WebDAV first; S3-compatible and self-hosted later), versioned + conflict copies |
 
 Single-user by design: no collaborative editing, no CRDT, no sync server with plaintext access.
 

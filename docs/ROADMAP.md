@@ -39,7 +39,7 @@ MyVault/
 - [x] pnpm + Vite + React + TS 初始化，Tauri 2 接入，`pnpm tauri dev` 跑通（create-tauri-app 官方 CLI；`pnpm build` + `cargo check` 验证通过）
 - [x] 品牌 logo（`docs/assets/logo.svg`）与全平台应用图标（`pnpm tauri icon`）、web favicon —— 计划外提前完成
 - [x] Tailwind + shadcn/ui 接入，基础布局壳（侧栏 + 主区）（Tailwind v4 Vite 插件 + shadcn CLI，radix 基座 / Nova preset）
-- [ ] 基础工程化：ESLint + Prettier + rustfmt + clippy，`pnpm check` 一键全查
+- [x] 基础工程化：ESLint + Prettier + rustfmt + clippy，`pnpm check` 一键全查（ESLint 9 flat config + typescript-eslint；`@eslint/create-config` 向导不支持非交互，按官方文档手写）
 - [ ] GitHub Actions：lint + 前后端测试，macOS / Windows / Linux 三平台矩阵构建通过
 
 **验收**：新克隆的仓库按 README 三条命令内能跑起空窗口应用；三平台 CI 绿。
@@ -120,14 +120,14 @@ MyVault/
 
 ## 主要风险与对冲
 
-| 风险 | 对冲 |
-|---|---|
-| Plait 成熟度不足、文档少 | M3 spike 前置做 go/no-go 决策；画布窄接口保证可整体替换；MIT 可 fork |
-| FTS5 中文检索质量 | trigram 起步 + 基准用例集，预留 jieba/tantivy 升级路径 |
-| 加密格式返工代价高 | M5 前先写格式文档评审再写代码；所有格式带版本号 |
-| WebDAV 服务端行为不一致 | 至少两家真实服务端做集成测试；`put` 的乐观锁语义降级方案（ETag 缺失时退回整库锁文件） |
-| 单人项目范围蔓延 | 非目标清单 + 每里程碑验收标准；新想法一律进 backlog 不插队 |
-| Linux WebView（webkit2gtk）渲染/IME 怪癖 | CI 三平台构建从 M0 开始；M3 画布 spike 与 M7 冒烟均覆盖 Linux |
+| 风险                                     | 对冲                                                                                  |
+| ---------------------------------------- | ------------------------------------------------------------------------------------- |
+| Plait 成熟度不足、文档少                 | M3 spike 前置做 go/no-go 决策；画布窄接口保证可整体替换；MIT 可 fork                  |
+| FTS5 中文检索质量                        | trigram 起步 + 基准用例集，预留 jieba/tantivy 升级路径                                |
+| 加密格式返工代价高                       | M5 前先写格式文档评审再写代码；所有格式带版本号                                       |
+| WebDAV 服务端行为不一致                  | 至少两家真实服务端做集成测试；`put` 的乐观锁语义降级方案（ETag 缺失时退回整库锁文件） |
+| 单人项目范围蔓延                         | 非目标清单 + 每里程碑验收标准；新想法一律进 backlog 不插队                            |
+| Linux WebView（webkit2gtk）渲染/IME 怪癖 | CI 三平台构建从 M0 开始；M3 画布 spike 与 M7 冒烟均覆盖 Linux                         |
 
 ## 已决策
 

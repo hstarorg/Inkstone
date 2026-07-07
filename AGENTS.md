@@ -14,6 +14,7 @@ Inkstone（砚台）：本地优先、端到端加密的跨平台桌面个人知
 - **格式先行**：任何落盘格式的新增/修改，必须先更新 `docs/FORMAT.md` 并经用户确认，再写代码；实现须遵守其总则（formatVersion、兼容策略、原子写）。
 - **加密**：只用成熟 crate（RustCrypto / libsodium 系），禁止自组合密码学原语；密钥材料不出 Rust 侧、不进日志与错误信息；FORMAT.md 加密章节定稿前禁止实现加密落盘代码。
 - **架构边界**：前端不直接访问文件系统/数据库，一切经 Tauri command；Plait 只经画布窄接口访问；`index.db` 是可重建的派生数据，不得作为唯一数据源。
+- **生成代码不可手改**：`src/components/ui/`（shadcn CLI 生成）只能由 CLI 写入，任何修改（含修 lint、格式化）都不允许手动进行；需要定制时在自己的组件里包装，或经 CLI 重新生成。lint/format 工具须将该目录排除。
 - **跨平台**：改动不得破坏 Windows/Linux 构建；快捷键用 Cmd/Ctrl 抽象，禁止硬编码单平台修饰键。
 
 ## 工程约定

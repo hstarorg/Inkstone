@@ -29,9 +29,9 @@ MyVault/
 ```jsonc
 {
   "formatVersion": 1,
-  "vaultId": "<ulid>",        // vault 唯一标识，创建时生成
+  "vaultId": "<ulid>", // vault 唯一标识，创建时生成
   "createdAt": "<ISO-8601>",
-  "encryption": "none"        // "none" | "v1"（v1 布局见加密章节，M5 定稿）
+  "encryption": "none", // "none" | "v1"（v1 布局见加密章节，M5 定稿）
 }
 ```
 
@@ -40,11 +40,11 @@ MyVault/
 ```jsonc
 {
   "formatVersion": 1,
-  "id": "<ulid>",             // 与文件名一致
+  "id": "<ulid>", // 与文件名一致
   "createdAt": "<ISO-8601>",
   "updatedAt": "<ISO-8601>",
   "tags": ["..."],
-  "content": { /* ProseMirror doc JSON（Tiptap 原生格式） */ }
+  "content": {/* ProseMirror doc JSON（Tiptap 原生格式） */},
 }
 ```
 
