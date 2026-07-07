@@ -1,47 +1,30 @@
-import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { Button } from "@/components/ui/button";
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
-
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
-
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-       
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+    <div className="flex h-screen bg-background text-foreground">
+      <aside className="flex w-60 shrink-0 flex-col border-r bg-sidebar">
+        <div className="flex items-center gap-2 px-4 py-3">
+          <img src="/logo.svg" alt="" className="size-6 rounded" />
+          <span className="text-sm font-semibold">Inkstone</span>
+        </div>
+        <div className="flex-1 overflow-y-auto px-2 py-1">
+          {/* 文档列表（M1） */}
+          <p className="px-2 py-8 text-center text-xs text-muted-foreground">
+            还没有文档
+          </p>
+        </div>
+      </aside>
+      <main className="flex flex-1 items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <img src="/logo.svg" alt="Inkstone" className="size-16 rounded-2xl" />
+          <p className="text-sm text-muted-foreground">
+            选择左侧文档，或从这里开始
+          </p>
+          <Button disabled>新建文档</Button>
+        </div>
+      </main>
+    </div>
   );
 }
 

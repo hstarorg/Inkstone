@@ -36,8 +36,9 @@ MyVault/
 
 ### M0 · 脚手架（预计 0.5 周）
 
-- [ ] pnpm + Vite + React + TS 初始化，Tauri 2 接入，`pnpm tauri dev` 跑通
-- [ ] Tailwind + shadcn/ui 接入，基础布局壳（侧栏 + 主区）
+- [x] pnpm + Vite + React + TS 初始化，Tauri 2 接入，`pnpm tauri dev` 跑通（create-tauri-app 官方 CLI；`pnpm build` + `cargo check` 验证通过）
+- [x] 品牌 logo（`docs/assets/logo.svg`）与全平台应用图标（`pnpm tauri icon`）、web favicon —— 计划外提前完成
+- [x] Tailwind + shadcn/ui 接入，基础布局壳（侧栏 + 主区）（Tailwind v4 Vite 插件 + shadcn CLI，radix 基座 / Nova preset）
 - [ ] 基础工程化：ESLint + Prettier + rustfmt + clippy，`pnpm check` 一键全查
 - [ ] GitHub Actions：lint + 前后端测试，macOS / Windows / Linux 三平台矩阵构建通过
 

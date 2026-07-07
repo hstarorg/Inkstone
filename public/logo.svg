@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Inkstone logo">
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F5EFE2"/>
+      <stop offset="1" stop-color="#E9E1CE"/>
+    </linearGradient>
+    <linearGradient id="wood" gradientUnits="userSpaceOnUse" x1="436" y1="58" x2="352" y2="180">
+      <stop offset="0" stop-color="#B98A54"/>
+      <stop offset="1" stop-color="#8F6238"/>
+    </linearGradient>
+    <linearGradient id="soak" gradientUnits="userSpaceOnUse" x1="352" y1="180" x2="317" y2="231">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="0.5" stop-color="#EFE9DB"/>
+      <stop offset="1" stop-color="#1A1820"/>
+    </linearGradient>
+  </defs>
+  <!-- 纸：温暖的宣纸底 -->
+  <rect x="32" y="32" width="448" height="448" rx="112" fill="url(#paper)"/>
+  <rect x="35" y="35" width="442" height="442" rx="109" fill="none" stroke="#5A4626" stroke-opacity="0.14" stroke-width="4"/>
+  <!-- 一笔：起笔顿、收笔提的「一」 -->
+  <path d="M 100 246 C 170 234 250 228 317 231 C 255 256 168 282 100 290 C 84 282 84 254 100 246 Z" fill="#17151D"/>
+  <!-- 毛笔：收在笔画末端 -->
+  <path d="M 436 58 L 352 180" stroke="url(#wood)" stroke-width="26" stroke-linecap="round"/>
+  <path d="M 364 189 C 352 208 334 222 317 231 C 328 210 334 192 340 172 Z" fill="url(#soak)" stroke="#B7AB90" stroke-opacity="0.5" stroke-width="2"/>
+  <!-- 私印：回字形朱砂印 -->
+  <rect x="154" y="390" width="36" height="36" rx="8" fill="#C43E2E"/>
+  <rect x="165" y="401" width="14" height="14" rx="3" fill="#F5EFE2"/>
+</svg>
