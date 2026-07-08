@@ -46,12 +46,12 @@ MyVault/
 
 ### M1 · Vault 与文档 CRUD（预计 1–1.5 周）
 
-- [ ] Rust：vault 创建/打开（记住最近路径）、`inkstone.json` 读写与版本校验
-- [ ] Rust：文档 list / read / write / delete / trash（软删除进回收目录）的 Tauri command，全部带单元测试
-- [ ] 前端：文档列表侧栏（先平铺，不做文件夹树）、新建/重命名/删除
-- [ ] Tiptap 接入：StarterKit 级别的编辑（标题、列表、粗斜体、代码块、引用）
-- [ ] 自动保存：防抖写盘 + 崩溃安全（先写临时文件再原子 rename）
-- [ ] 文档 JSON schema 定稿并写文档（`docs/FORMAT.md`）
+- [x] Rust：vault 创建/打开（记住最近路径，存 OS 配置目录）、`inkstone.json` 读写与版本校验
+- [x] Rust：文档 list / read / write / trash / restore 的 Tauri command，12 个单元测试全过（含损坏文件、版本超限、未知字段保真、孤儿 tmp 清扫）
+- [x] 前端：欢迎页（打开/新建 vault）、文档列表侧栏、新建/删除（重命名 = 改首行，标题派生）
+- [x] Tiptap 接入：StarterKit 级别的编辑（M0 后已远超此范围）
+- [x] 自动保存：500ms 防抖写盘 + 切换/删除时 flush + 原子写崩溃安全
+- [x] 文档 JSON schema 定稿并写文档（`docs/FORMAT.md`，已评审）
 
 **验收**：断网、杀进程、重启后无数据丢失；手工构造损坏 JSON 时应用报错而非崩溃。
 
