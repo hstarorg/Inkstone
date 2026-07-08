@@ -12,9 +12,10 @@
   "app": {
     "windows": [
       {
-        "title": "inkstone",
-        "width": 800,
-        "height": 600
+        "title": "Inkstone",
+        "width": 1080,
+        "height": 720,
+        "dragDropEnabled": false
       }
     ],
     "security": {

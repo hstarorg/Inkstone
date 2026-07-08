@@ -1,4 +1,9 @@
-import { EditorContent, useEditor, type JSONContent } from "@tiptap/react";
+import {
+  EditorContent,
+  ReactNodeViewRenderer,
+  useEditor,
+  type JSONContent,
+} from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Placeholder } from "@tiptap/extensions";
 import Typography from "@tiptap/extension-typography";
@@ -11,14 +16,26 @@ import {
   DetailsContent,
   DetailsSummary,
 } from "@tiptap/extension-details";
+import NodeRange from "@tiptap/extension-node-range";
+import { Markdown } from "@tiptap/markdown";
+import { DragHandle } from "@tiptap/extension-drag-handle-react";
+import { GripVertical } from "lucide-react";
 import { common, createLowlight } from "lowlight";
 import { cn } from "@/lib/utils";
 import { RicherEditorBubbleMenu } from "./bubble-menu";
 import { Callout } from "./callout";
+import { CodeBlockView } from "./code-block-view";
+import { MarkdownClipboard } from "./markdown-clipboard";
 import { SlashCommand } from "./slash-menu";
 import "./richer-editor.css";
 
 const lowlight = createLowlight(common);
+
+const CodeBlock = CodeBlockLowlight.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(CodeBlockView);
+  },
+}).configure({ lowlight });
 
 export interface RicherEditorProps {
   defaultValue?: JSONContent;
@@ -45,7 +62,7 @@ export function RicherEditor({
         codeBlock: false,
         link: { openOnClick: false },
       }),
-      CodeBlockLowlight.configure({ lowlight }),
+      CodeBlock,
       TableKit,
       TaskList,
       TaskItem.configure({ nested: true }),
@@ -57,6 +74,9 @@ export function RicherEditor({
       Placeholder.configure({ placeholder }),
       Callout,
       SlashCommand,
+      NodeRange,
+      Markdown,
+      MarkdownClipboard,
     ],
     content: defaultValue,
     editable,
@@ -77,6 +97,13 @@ export function RicherEditor({
   return (
     <>
       {editor && editable && <RicherEditorBubbleMenu editor={editor} />}
+      {editor && editable && (
+        <DragHandle editor={editor}>
+          <div className="mr-1 cursor-grab rounded-md p-0.5 text-popover-foreground/40 hover:bg-accent hover:text-accent-foreground">
+            <GripVertical className="size-4" />
+          </div>
+        </DragHandle>
+      )}
       <EditorContent
         editor={editor}
         className={cn("h-full overflow-y-auto", className)}

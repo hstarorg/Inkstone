@@ -169,6 +169,30 @@
   margin-bottom: 0.25em;
 }
 
+.tiptap .code-block {
+  position: relative;
+}
+
+.tiptap .code-block > select {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 1;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: #d1d5db;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.tiptap .code-block:hover > select,
+.tiptap .code-block > select:focus {
+  opacity: 1;
+}
+
 /* Token palette tuned for the dark code-block background the typography
    plugin uses in both light and dark themes. */
 .tiptap .hljs-comment,
