@@ -1,0 +1,69 @@
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: color-mix(in srgb, currentColor 35%, transparent);
+}
+
+/* Token palette tuned for the dark code-block background the typography
+   plugin uses in both light and dark themes. */
+.tiptap .hljs-comment,
+.tiptap .hljs-quote {
+  color: #7f848e;
+  font-style: italic;
+}
+
+.tiptap .hljs-keyword,
+.tiptap .hljs-selector-tag,
+.tiptap .hljs-subst {
+  color: #c678dd;
+}
+
+.tiptap .hljs-number,
+.tiptap .hljs-literal,
+.tiptap .hljs-variable,
+.tiptap .hljs-template-variable,
+.tiptap .hljs-attr,
+.tiptap .hljs-attribute {
+  color: #d19a66;
+}
+
+.tiptap .hljs-string,
+.tiptap .hljs-doctag,
+.tiptap .hljs-regexp,
+.tiptap .hljs-addition {
+  color: #98c379;
+}
+
+.tiptap .hljs-title,
+.tiptap .hljs-section,
+.tiptap .hljs-name,
+.tiptap .hljs-function {
+  color: #61afef;
+}
+
+.tiptap .hljs-type,
+.tiptap .hljs-class,
+.tiptap .hljs-title.class_,
+.tiptap .hljs-built_in,
+.tiptap .hljs-builtin-name {
+  color: #e5c07b;
+}
+
+.tiptap .hljs-symbol,
+.tiptap .hljs-bullet,
+.tiptap .hljs-link,
+.tiptap .hljs-meta,
+.tiptap .hljs-selector-id,
+.tiptap .hljs-deletion {
+  color: #e06c75;
+}
+
+.tiptap .hljs-emphasis {
+  font-style: italic;
+}
+
+.tiptap .hljs-strong {
+  font-weight: 600;
+}
