@@ -255,6 +255,48 @@
   margin-bottom: 0.25em;
 }
 
+.tiptap .asset-image {
+  margin-block: 0.6em;
+}
+
+.tiptap .asset-image .image-frame {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.tiptap .asset-image img {
+  max-width: 100%;
+  border-radius: 0.375rem;
+  margin: 0;
+}
+
+.tiptap .asset-image .image-frame.is-selected img {
+  outline: 2px solid color-mix(in srgb, currentColor 45%, transparent);
+  outline-offset: 1px;
+}
+
+.tiptap .asset-image .resize-handle {
+  position: absolute;
+  top: 50%;
+  right: 3px;
+  width: 6px;
+  height: 42px;
+  max-height: 60%;
+  transform: translateY(-50%);
+  border-radius: 3px;
+  background: color-mix(in srgb, currentColor 55%, transparent);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  cursor: ew-resize;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.tiptap .asset-image .image-frame:hover .resize-handle,
+.tiptap .asset-image .image-frame.is-selected .resize-handle {
+  opacity: 1;
+}
+
 .tiptap .code-block {
   position: relative;
 }

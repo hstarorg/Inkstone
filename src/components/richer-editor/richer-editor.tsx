@@ -25,6 +25,12 @@ import { DragHandle } from "@tiptap/extension-drag-handle-react";
 import { GripVertical } from "lucide-react";
 import { common, createLowlight } from "lowlight";
 import { cn } from "@/lib/utils";
+import {
+  createAssetImage,
+  createImageDropPaste,
+  type ResolveAssetSrc,
+  type UploadImage,
+} from "./asset-image";
 import { RicherEditorBubbleMenu } from "./bubble-menu";
 import { Callout } from "./callout";
 import { CodeBlockView } from "./code-block-view";
@@ -49,6 +55,8 @@ export interface RicherEditorProps {
   autofocus?: boolean;
   placeholder?: string;
   showCharacterCount?: boolean;
+  uploadImage?: UploadImage;
+  resolveAssetSrc?: ResolveAssetSrc;
   className?: string;
   contentClassName?: string;
 }
@@ -73,6 +81,8 @@ export function RicherEditor({
   autofocus = false,
   placeholder = "Start writing…",
   showCharacterCount = true,
+  uploadImage,
+  resolveAssetSrc = (src) => src,
   className,
   contentClassName,
 }: RicherEditorProps) {
@@ -80,6 +90,8 @@ export function RicherEditor({
 
   const editor = useEditor({
     extensions: [
+      createAssetImage(resolveAssetSrc),
+      createImageDropPaste(uploadImage),
       StarterKit.configure({
         codeBlock: false,
         link: { openOnClick: false },

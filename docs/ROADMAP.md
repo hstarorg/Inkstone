@@ -69,7 +69,7 @@ MyVault/
 - [x] Callout 信息块：info / tip / warn / danger 变体（点击图标循环切换，slash 菜单插入）
 - [x] 折叠块（toggle/details，标题 + 可折叠内容，保留开合状态）
 - [x] 高亮标记：`==text==` 快捷输入 + 气泡栏 5 色色板
-- [ ] 图片：粘贴/拖入 → `assets/` 内容寻址 → 缩放、说明文字（存储依赖 M1 vault）
+- [x] 图片：粘贴/拖入 → `assets/` 内容寻址去重 → 文档存 `asset://` 引用；拖拽手柄缩放，宽度持久化（说明文字 → P2 打磨）
 - [x] 块拖拽手柄：拖动重排、块选中（官方 DragHandle + NodeRange）
 - [x] Markdown 互操作：粘贴 Markdown 解析（启发式识别）、复制纯文本即 Markdown（官方 `@tiptap/markdown` + 自定义剪贴板扩展；callout/details 序列化留 M7 导出时补）
 

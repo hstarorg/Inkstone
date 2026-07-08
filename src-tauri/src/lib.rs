@@ -1,8 +1,14 @@
+mod assets;
 mod docs;
 mod vault;
 
 use serde_json::{json, Value};
 use tauri::Manager;
+
+fn allow_asset_dir(app: &tauri::AppHandle, vault: &str) {
+    let assets_dir = std::path::Path::new(vault).join("assets");
+    let _ = app.asset_protocol_scope().allow_directory(assets_dir, true);
+}
 
 fn state_file(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
     let dir = app
@@ -24,6 +30,7 @@ fn remember_vault(app: &tauri::AppHandle, path: &str) {
 fn vault_create(app: tauri::AppHandle, path: String) -> Result<vault::VaultInfo, String> {
     let info = vault::create(&path)?;
     remember_vault(&app, &info.path);
+    allow_asset_dir(&app, &info.path);
     Ok(info)
 }
 
@@ -31,7 +38,13 @@ fn vault_create(app: tauri::AppHandle, path: String) -> Result<vault::VaultInfo,
 fn vault_open(app: tauri::AppHandle, path: String) -> Result<vault::VaultInfo, String> {
     let info = vault::open(&path)?;
     remember_vault(&app, &info.path);
+    allow_asset_dir(&app, &info.path);
     Ok(info)
+}
+
+#[tauri::command]
+fn asset_save(vault: String, data: String, ext: String) -> Result<String, String> {
+    assets::save(&vault, &data, &ext)
 }
 
 #[tauri::command]
@@ -89,6 +102,7 @@ pub fn run() {
             doc_write,
             doc_trash,
             doc_restore,
+            asset_save,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

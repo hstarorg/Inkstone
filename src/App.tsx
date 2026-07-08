@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { FolderOpen, FolderPlus, Plus, Trash2 } from "lucide-react";
 import { RicherEditor, type JSONContent } from "@/components/richer-editor";
@@ -24,6 +25,27 @@ function deriveTitle(content: JSONContent): string {
 function vaultName(path: string): string {
   return path.split(/[/\\]/).filter(Boolean).pop() ?? path;
 }
+
+const EXT_BY_MIME: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/gif": "gif",
+  "image/webp": "webp",
+  "image/svg+xml": "svg",
+  "image/avif": "avif",
+};
+
+function toBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+const ASSET_PREFIX = "asset://";
 
 function App() {
   const [vault, setVault] = useState<string | null>(null);
@@ -126,6 +148,30 @@ function App() {
       setError(String(trashError));
     }
   };
+
+  const uploadImage = useCallback(
+    async (file: File) => {
+      if (!vault) throw new Error("no vault open");
+      const ext = EXT_BY_MIME[file.type] ?? file.name.split(".").pop() ?? "bin";
+      const name = await vaultApi.saveAsset(
+        vault,
+        toBase64(await file.arrayBuffer()),
+        ext,
+      );
+      return `${ASSET_PREFIX}${name}`;
+    },
+    [vault],
+  );
+
+  const resolveAssetSrc = useCallback(
+    (src: string) => {
+      if (!vault || !src.startsWith(ASSET_PREFIX)) return src;
+      return convertFileSrc(
+        `${vault}/assets/${src.slice(ASSET_PREFIX.length)}`,
+      );
+    },
+    [vault],
+  );
 
   const handleChange = (id: string, content: JSONContent) => {
     setDocs((prev) =>
@@ -230,6 +276,8 @@ function App() {
             defaultValue={activeDoc.content}
             autofocus
             onChange={(content) => handleChange(activeDoc.id, content)}
+            uploadImage={uploadImage}
+            resolveAssetSrc={resolveAssetSrc}
           />
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-4">

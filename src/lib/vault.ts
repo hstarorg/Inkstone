@@ -42,4 +42,6 @@ export const vaultApi = {
     invoke<void>("doc_trash", { vault, id }),
   restoreDoc: (vault: string, id: string) =>
     invoke<void>("doc_restore", { vault, id }),
+  saveAsset: (vault: string, dataBase64: string, ext: string) =>
+    invoke<string>("asset_save", { vault, data: dataBase64, ext }),
 };
