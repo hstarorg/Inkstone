@@ -6,6 +6,169 @@
   color: color-mix(in srgb, currentColor 35%, transparent);
 }
 
+.tiptap mark {
+  color: #1f2937;
+  padding: 0 0.1em;
+  border-radius: 0.15em;
+}
+
+.tiptap ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.tiptap ul[data-type="taskList"] li {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tiptap ul[data-type="taskList"] li > label {
+  flex: 0 0 auto;
+  user-select: none;
+  padding-top: 0.2em;
+}
+
+.tiptap ul[data-type="taskList"] li > div {
+  flex: 1 1 auto;
+}
+
+.tiptap ul[data-type="taskList"] li > div > p {
+  margin: 0.25em 0;
+}
+
+.tiptap ul[data-type="taskList"] li[data-checked="true"] > div {
+  text-decoration: line-through;
+  color: color-mix(in srgb, currentColor 50%, transparent);
+}
+
+.tiptap table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 1em 0;
+}
+
+.tiptap table td,
+.tiptap table th {
+  position: relative;
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  padding: 0.4rem 0.6rem;
+  vertical-align: top;
+}
+
+.tiptap table th {
+  background: color-mix(in srgb, currentColor 7%, transparent);
+  font-weight: 600;
+  text-align: left;
+}
+
+.tiptap table td > p,
+.tiptap table th > p {
+  margin: 0;
+}
+
+.tiptap table .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  pointer-events: none;
+}
+
+.tiptap [data-type="callout"] {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1em 0;
+  padding: 0.6rem 0.75rem;
+  border-left: 3px solid var(--callout-hue);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--callout-hue) 10%, transparent);
+}
+
+.tiptap [data-type="callout"][data-variant="info"] {
+  --callout-hue: #3b82f6;
+}
+
+.tiptap [data-type="callout"][data-variant="tip"] {
+  --callout-hue: #22c55e;
+}
+
+.tiptap [data-type="callout"][data-variant="warn"] {
+  --callout-hue: #f59e0b;
+}
+
+.tiptap [data-type="callout"][data-variant="danger"] {
+  --callout-hue: #ef4444;
+}
+
+.tiptap [data-type="callout"] .callout-icon {
+  flex: 0 0 auto;
+  margin-top: 0.35rem;
+  color: var(--callout-hue);
+  cursor: pointer;
+}
+
+.tiptap [data-type="callout"] .callout-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tiptap [data-type="callout"] .callout-content > :first-child {
+  margin-top: 0;
+}
+
+.tiptap [data-type="callout"] .callout-content > :last-child {
+  margin-bottom: 0;
+}
+
+.tiptap [data-type="details"] {
+  display: flex;
+  gap: 0.4rem;
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  margin: 1em 0;
+}
+
+.tiptap [data-type="details"] > button {
+  flex: 0 0 auto;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.15rem;
+  cursor: pointer;
+  border-radius: 0.25rem;
+  background: transparent;
+}
+
+.tiptap [data-type="details"] > button::before {
+  content: "▸";
+  display: block;
+  transition: transform 0.15s;
+}
+
+.tiptap [data-type="details"].is-open > button::before {
+  transform: rotate(90deg);
+}
+
+.tiptap [data-type="details"] > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tiptap [data-type="details"] summary {
+  list-style: none;
+  font-weight: 600;
+  cursor: text;
+}
+
+.tiptap [data-type="detailsContent"] > :first-child {
+  margin-top: 0.5em;
+}
+
+.tiptap [data-type="detailsContent"] > :last-child {
+  margin-bottom: 0.25em;
+}
+
 /* Token palette tuned for the dark code-block background the typography
    plugin uses in both light and dark themes. */
 .tiptap .hljs-comment,

@@ -9,6 +9,7 @@ import {
   Heading1,
   Heading2,
   Heading3,
+  Highlighter,
   Italic,
   Link as LinkIcon,
   List,
@@ -141,8 +142,49 @@ function ActionButton({
   );
 }
 
+const HIGHLIGHT_COLORS = [
+  { name: "Yellow", value: "#fde047" },
+  { name: "Green", value: "#86efac" },
+  { name: "Blue", value: "#93c5fd" },
+  { name: "Pink", value: "#f9a8d4" },
+  { name: "Orange", value: "#fdba74" },
+];
+
+const TABLE_ACTIONS: {
+  key: string;
+  label: string;
+  run: (e: Editor) => void;
+}[] = [
+  {
+    key: "addRow",
+    label: "+Row",
+    run: (e) => e.chain().focus().addRowAfter().run(),
+  },
+  {
+    key: "delRow",
+    label: "−Row",
+    run: (e) => e.chain().focus().deleteRow().run(),
+  },
+  {
+    key: "addCol",
+    label: "+Col",
+    run: (e) => e.chain().focus().addColumnAfter().run(),
+  },
+  {
+    key: "delCol",
+    label: "−Col",
+    run: (e) => e.chain().focus().deleteColumn().run(),
+  },
+  {
+    key: "header",
+    label: "Header",
+    run: (e) => e.chain().focus().toggleHeaderRow().run(),
+  },
+];
+
 export function RicherEditorBubbleMenu({ editor }: { editor: Editor }) {
   const [linkOpen, setLinkOpen] = useState(false);
+  const [highlightOpen, setHighlightOpen] = useState(false);
   const [url, setUrl] = useState("");
   const linkOpenRef = useRef(false);
 
@@ -156,6 +198,9 @@ export function RicherEditorBubbleMenu({ editor }: { editor: Editor }) {
       blocks: BLOCK_ACTIONS.map((action) => action.isActive(editor)),
       marks: MARK_ACTIONS.map((action) => action.isActive(editor)),
       link: editor.isActive("link"),
+      highlight: editor.isActive("highlight"),
+      table: editor.isActive("table"),
+      selectionEmpty: editor.state.selection.empty,
     }),
   });
 
@@ -185,15 +230,78 @@ export function RicherEditorBubbleMenu({ editor }: { editor: Editor }) {
     setLinkOpen(false);
   };
 
+  const tableControls = (
+    <>
+      {TABLE_ACTIONS.map((action) => (
+        <button
+          key={action.key}
+          type="button"
+          aria-label={action.label}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => action.run(editor)}
+          className="rounded-md px-1.5 py-1 text-xs hover:bg-accent hover:text-accent-foreground"
+        >
+          {action.label}
+        </button>
+      ))}
+      <button
+        type="button"
+        aria-label="Delete table"
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={() => editor.chain().focus().deleteTable().run()}
+        className="rounded-md p-1.5 hover:bg-accent hover:text-accent-foreground"
+      >
+        <Trash2 className="size-4" />
+      </button>
+    </>
+  );
+
   return (
     <BubbleMenu
       editor={editor}
       shouldShow={({ editor }) =>
-        linkOpenRef.current || !editor.state.selection.empty
+        linkOpenRef.current ||
+        !editor.state.selection.empty ||
+        editor.isActive("table")
       }
       className="flex items-center gap-0.5 rounded-lg border bg-popover p-1 text-popover-foreground shadow-md"
     >
-      {linkOpen ? (
+      {state.table && state.selectionEmpty && !linkOpen && !highlightOpen ? (
+        tableControls
+      ) : highlightOpen ? (
+        <div className="flex items-center gap-1 px-1">
+          {HIGHLIGHT_COLORS.map((color) => (
+            <button
+              key={color.value}
+              type="button"
+              aria-label={`Highlight ${color.name}`}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => {
+                editor
+                  .chain()
+                  .focus()
+                  .setHighlight({ color: color.value })
+                  .run();
+                setHighlightOpen(false);
+              }}
+              className="size-5 rounded-full border border-black/10"
+              style={{ backgroundColor: color.value }}
+            />
+          ))}
+          <button
+            type="button"
+            aria-label="Remove highlight"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => {
+              editor.chain().focus().unsetHighlight().run();
+              setHighlightOpen(false);
+            }}
+            className="rounded-md p-1.5 hover:bg-accent hover:text-accent-foreground"
+          >
+            <Trash2 className="size-4" />
+          </button>
+        </div>
+      ) : linkOpen ? (
         <div className="flex items-center gap-0.5">
           <input
             autoFocus
@@ -251,6 +359,19 @@ export function RicherEditorBubbleMenu({ editor }: { editor: Editor }) {
           <div className="mx-0.5 h-5 w-px bg-border" />
           <button
             type="button"
+            aria-label="Highlight"
+            aria-pressed={state.highlight}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => setHighlightOpen(true)}
+            className={cn(
+              "rounded-md p-1.5 hover:bg-accent hover:text-accent-foreground",
+              state.highlight && "bg-accent text-accent-foreground",
+            )}
+          >
+            <Highlighter className="size-4" />
+          </button>
+          <button
+            type="button"
             aria-label="Edit link"
             aria-pressed={state.link}
             onMouseDown={(event) => event.preventDefault()}
@@ -262,6 +383,12 @@ export function RicherEditorBubbleMenu({ editor }: { editor: Editor }) {
           >
             <LinkIcon className="size-4" />
           </button>
+          {state.table && (
+            <>
+              <div className="mx-0.5 h-5 w-px bg-border" />
+              {tableControls}
+            </>
+          )}
         </>
       )}
     </BubbleMenu>

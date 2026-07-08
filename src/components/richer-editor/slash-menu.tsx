@@ -1,0 +1,230 @@
+import { Extension } from "@tiptap/core";
+import { ReactRenderer } from "@tiptap/react";
+import Suggestion, {
+  type SuggestionKeyDownProps,
+  type SuggestionProps,
+} from "@tiptap/suggestion";
+import {
+  Code,
+  Heading1,
+  Heading2,
+  Heading3,
+  Info,
+  List,
+  ListCollapse,
+  ListOrdered,
+  ListTodo,
+  Minus,
+  Pilcrow,
+  Table,
+  TextQuote,
+} from "lucide-react";
+import {
+  SlashList,
+  type SlashCommandItem,
+  type SlashListProps,
+  type SlashListRef,
+} from "./slash-list";
+
+const COMMANDS: SlashCommandItem[] = [
+  {
+    key: "text",
+    label: "Text",
+    keywords: "paragraph plain",
+    icon: Pilcrow,
+    run: (editor, range) =>
+      editor.chain().focus().deleteRange(range).setParagraph().run(),
+  },
+  {
+    key: "h1",
+    label: "Heading 1",
+    keywords: "h1 title",
+    icon: Heading1,
+    run: (editor, range) =>
+      editor.chain().focus().deleteRange(range).setHeading({ level: 1 }).run(),
+  },
+  {
+    key: "h2",
+    label: "Heading 2",
+    keywords: "h2 subtitle",
+    icon: Heading2,
+    run: (editor, range) =>
+      editor.chain().focus().deleteRange(range).setHeading({ level: 2 }).run(),
+  },
+  {
+    key: "h3",
+    label: "Heading 3",
+    keywords: "h3",
+    icon: Heading3,
+    run: (editor, range) =>
+      editor.chain().focus().deleteRange(range).setHeading({ level: 3 }).run(),
+  },
+  {
+    key: "bulletList",
+    label: "Bullet list",
+    keywords: "ul unordered",
+    icon: List,
+    run: (editor, range) =>
+      editor.chain().focus().deleteRange(range).toggleBulletList().run(),
+  },
+  {
+    key: "orderedList",
+    label: "Ordered list",
+    keywords: "ol numbered",
+    icon: ListOrdered,
+    run: (editor, range) =>
+      editor.chain().focus().deleteRange(range).toggleOrderedList().run(),
+  },
+  {
+    key: "taskList",
+    label: "Task list",
+    keywords: "todo checkbox check",
+    icon: ListTodo,
+    run: (editor, range) =>
+      editor.chain().focus().deleteRange(range).toggleTaskList().run(),
+  },
+  {
+    key: "table",
+    label: "Table",
+    keywords: "grid rows columns",
+    icon: Table,
+    run: (editor, range) =>
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+        .run(),
+  },
+  {
+    key: "quote",
+    label: "Quote",
+    keywords: "blockquote citation",
+    icon: TextQuote,
+    run: (editor, range) =>
+      editor.chain().focus().deleteRange(range).toggleBlockquote().run(),
+  },
+  {
+    key: "codeBlock",
+    label: "Code block",
+    keywords: "snippet pre fence",
+    icon: Code,
+    run: (editor, range) =>
+      editor.chain().focus().deleteRange(range).toggleCodeBlock().run(),
+  },
+  {
+    key: "callout",
+    label: "Callout",
+    keywords: "info tip warning danger note admonition",
+    icon: Info,
+    run: (editor, range) =>
+      editor.chain().focus().deleteRange(range).toggleCallout().run(),
+  },
+  {
+    key: "details",
+    label: "Toggle",
+    keywords: "details collapse fold",
+    icon: ListCollapse,
+    run: (editor, range) =>
+      editor.chain().focus().deleteRange(range).setDetails().run(),
+  },
+  {
+    key: "divider",
+    label: "Divider",
+    keywords: "hr horizontal rule separator",
+    icon: Minus,
+    run: (editor, range) =>
+      editor.chain().focus().deleteRange(range).setHorizontalRule().run(),
+  },
+];
+
+function filterCommands(query: string): SlashCommandItem[] {
+  const q = query.toLowerCase().trim();
+  if (!q) return COMMANDS;
+  return COMMANDS.filter(
+    (item) => item.label.toLowerCase().includes(q) || item.keywords.includes(q),
+  );
+}
+
+function positionElement(
+  element: HTMLElement,
+  clientRect: (() => DOMRect | null) | null | undefined,
+) {
+  const rect = clientRect?.();
+  if (!rect) return;
+  element.style.position = "fixed";
+  element.style.zIndex = "50";
+  element.style.left = `${rect.left}px`;
+  const spaceBelow = window.innerHeight - rect.bottom;
+  if (spaceBelow < 320) {
+    element.style.top = "auto";
+    element.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+  } else {
+    element.style.bottom = "auto";
+    element.style.top = `${rect.bottom + 4}px`;
+  }
+}
+
+export const SlashCommand = Extension.create({
+  name: "slashCommand",
+
+  addProseMirrorPlugins() {
+    return [
+      Suggestion<SlashCommandItem>({
+        editor: this.editor,
+        char: "/",
+        command: ({ editor, range, props }) => props.run(editor, range),
+        items: ({ query }) => filterCommands(query),
+        render: () => {
+          let component: ReactRenderer<SlashListRef, SlashListProps> | null =
+            null;
+
+          const destroy = () => {
+            component?.element.remove();
+            component?.destroy();
+            component = null;
+          };
+
+          return {
+            onStart: (props: SuggestionProps<SlashCommandItem>) => {
+              component = new ReactRenderer(SlashList, {
+                props: {
+                  items: props.items,
+                  command: (item: SlashCommandItem) => props.command(item),
+                },
+                editor: props.editor,
+              });
+              document.body.appendChild(component.element);
+              positionElement(
+                component.element as HTMLElement,
+                props.clientRect,
+              );
+            },
+            onUpdate: (props: SuggestionProps<SlashCommandItem>) => {
+              component?.updateProps({
+                items: props.items,
+                command: (item: SlashCommandItem) => props.command(item),
+              });
+              if (component) {
+                positionElement(
+                  component.element as HTMLElement,
+                  props.clientRect,
+                );
+              }
+            },
+            onKeyDown: (props: SuggestionKeyDownProps) => {
+              if (props.event.key === "Escape") {
+                destroy();
+                return true;
+              }
+              return component?.ref?.onKeyDown(props.event) ?? false;
+            },
+            onExit: destroy,
+          };
+        },
+      }),
+    ];
+  },
+});
+
+export type { SlashCommandItem };

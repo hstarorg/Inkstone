@@ -3,9 +3,19 @@ import StarterKit from "@tiptap/starter-kit";
 import { Placeholder } from "@tiptap/extensions";
 import Typography from "@tiptap/extension-typography";
 import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
+import { TableKit } from "@tiptap/extension-table";
+import { TaskItem, TaskList } from "@tiptap/extension-list";
+import Highlight from "@tiptap/extension-highlight";
+import {
+  Details,
+  DetailsContent,
+  DetailsSummary,
+} from "@tiptap/extension-details";
 import { common, createLowlight } from "lowlight";
 import { cn } from "@/lib/utils";
 import { RicherEditorBubbleMenu } from "./bubble-menu";
+import { Callout } from "./callout";
+import { SlashCommand } from "./slash-menu";
 import "./richer-editor.css";
 
 const lowlight = createLowlight(common);
@@ -36,8 +46,17 @@ export function RicherEditor({
         link: { openOnClick: false },
       }),
       CodeBlockLowlight.configure({ lowlight }),
+      TableKit,
+      TaskList,
+      TaskItem.configure({ nested: true }),
+      Highlight.configure({ multicolor: true }),
+      Details.configure({ persist: true }),
+      DetailsSummary,
+      DetailsContent,
       Typography,
       Placeholder.configure({ placeholder }),
+      Callout,
+      SlashCommand,
     ],
     content: defaultValue,
     editable,
