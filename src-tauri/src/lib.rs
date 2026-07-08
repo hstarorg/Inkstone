@@ -1,5 +1,6 @@
 mod assets;
 mod docs;
+mod index;
 mod vault;
 
 use serde_json::{json, Value};
@@ -39,6 +40,9 @@ fn vault_open(app: tauri::AppHandle, path: String) -> Result<vault::VaultInfo, S
     let info = vault::open(&path)?;
     remember_vault(&app, &info.path);
     allow_asset_dir(&app, &info.path);
+    if let Err(error) = index::rebuild(&info.path) {
+        eprintln!("index rebuild failed: {error}");
+    }
     Ok(info)
 }
 
@@ -64,7 +68,11 @@ fn doc_list(vault: String) -> Result<docs::DocList, String> {
 
 #[tauri::command]
 fn doc_create(vault: String) -> Result<Value, String> {
-    docs::create(&vault)
+    let doc = docs::create(&vault)?;
+    if let (Some(id), Some(content)) = (doc.get("id").and_then(Value::as_str), doc.get("content")) {
+        let _ = index::index_doc(&vault, id, "Untitled", content);
+    }
+    Ok(doc)
 }
 
 #[tauri::command]
@@ -74,17 +82,33 @@ fn doc_read(vault: String, id: String) -> Result<Value, String> {
 
 #[tauri::command]
 fn doc_write(vault: String, id: String, content: Value) -> Result<docs::DocMeta, String> {
-    docs::write_content(&vault, &id, content)
+    let meta = docs::write_content(&vault, &id, content.clone())?;
+    let _ = index::index_doc(&vault, &id, &meta.title, &content);
+    Ok(meta)
 }
 
 #[tauri::command]
 fn doc_trash(vault: String, id: String) -> Result<(), String> {
-    docs::trash(&vault, &id)
+    docs::trash(&vault, &id)?;
+    let _ = index::remove_doc(&vault, &id);
+    Ok(())
 }
 
 #[tauri::command]
 fn doc_restore(vault: String, id: String) -> Result<(), String> {
-    docs::restore(&vault, &id)
+    docs::restore(&vault, &id)?;
+    if let Ok(doc) = docs::read(&vault, &id) {
+        if let Some(content) = doc.get("content") {
+            let title = docs::meta_of(&doc).title;
+            let _ = index::index_doc(&vault, &id, &title, content);
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn search_docs(vault: String, query: String) -> Result<Vec<index::SearchHit>, String> {
+    index::search(&vault, &query)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -103,6 +127,7 @@ pub fn run() {
             doc_trash,
             doc_restore,
             asset_save,
+            search_docs,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

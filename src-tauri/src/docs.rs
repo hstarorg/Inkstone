@@ -34,7 +34,7 @@ fn doc_path(vault: &str, id: &str) -> PathBuf {
     docs_dir(vault).join(format!("{id}.json"))
 }
 
-fn collect_text(node: &Value, out: &mut String) {
+pub(crate) fn collect_text(node: &Value, out: &mut String) {
     if node.get("type").and_then(Value::as_str) == Some("text") {
         if let Some(text) = node.get("text").and_then(Value::as_str) {
             out.push_str(text);
@@ -73,7 +73,7 @@ fn string_field(doc: &Value, key: &str) -> String {
         .to_string()
 }
 
-fn meta_of(doc: &Value) -> DocMeta {
+pub(crate) fn meta_of(doc: &Value) -> DocMeta {
     DocMeta {
         id: string_field(doc, "id"),
         title: derive_title(doc),

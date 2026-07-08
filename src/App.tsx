@@ -3,6 +3,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { FolderOpen, FolderPlus, Plus, Trash2 } from "lucide-react";
 import { RicherEditor, type JSONContent } from "@/components/richer-editor";
+import { SearchPalette } from "@/components/search-palette";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { vaultApi, type DocMeta } from "@/lib/vault";
@@ -52,6 +53,18 @@ function App() {
   const [docs, setDocs] = useState<DocMeta[]>([]);
   const [activeDoc, setActiveDoc] = useState<ActiveDoc | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setSearchOpen((open) => !open);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const pendingWrite = useRef<{
     timer: ReturnType<typeof setTimeout>;
@@ -217,6 +230,13 @@ function App() {
 
   return (
     <div className="flex h-screen bg-background text-foreground">
+      {searchOpen && (
+        <SearchPalette
+          vault={vault}
+          onOpen={(id) => void selectDoc(id)}
+          onClose={() => setSearchOpen(false)}
+        />
+      )}
       <aside className="flex w-60 shrink-0 flex-col border-r bg-sidebar">
         <div className="flex items-center gap-2 px-4 py-3">
           <img src="/logo.svg" alt="" className="size-6 rounded" />
