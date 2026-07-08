@@ -1,33 +1,36 @@
 import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
-import Image, { type ImageOptions } from "@tiptap/extension-image";
-import { ReactNodeViewRenderer } from "@tiptap/react";
-import { ImageView } from "./image-view";
+import Image from "@tiptap/extension-image";
 
 export type ResolveAssetSrc = (src: string) => string;
 export type UploadImage = (file: File) => Promise<string>;
 
 export function createAssetImage(resolveSrc: ResolveAssetSrc) {
   return Image.extend({
-    addOptions() {
-      return { ...(this.parent?.() ?? ({} as ImageOptions)), resolveSrc };
-    },
     addAttributes() {
       return {
         ...this.parent?.(),
-        width: {
+        src: {
           default: null,
-          parseHTML: (element) => {
-            const value = element.getAttribute("width");
-            return value ? Number.parseInt(value, 10) : null;
-          },
+          parseHTML: (element) =>
+            element.getAttribute("data-canonical-src") ??
+            element.getAttribute("src"),
           renderHTML: (attributes) =>
-            attributes.width ? { width: attributes.width } : {},
+            attributes.src
+              ? {
+                  src: resolveSrc(attributes.src as string),
+                  "data-canonical-src": attributes.src,
+                }
+              : {},
         },
       };
     },
-    addNodeView() {
-      return ReactNodeViewRenderer(ImageView);
+  }).configure({
+    resize: {
+      enabled: true,
+      minWidth: 80,
+      alwaysPreserveAspectRatio: true,
+      directions: ["left", "right", "bottom-left", "bottom-right"],
     },
   });
 }
