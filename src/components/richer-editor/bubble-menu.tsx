@@ -14,6 +14,7 @@ import {
   Link as LinkIcon,
   List,
   ListOrdered,
+  RemoveFormatting,
   Strikethrough,
   TextQuote,
   Trash2,
@@ -382,6 +383,15 @@ export function RicherEditorBubbleMenu({ editor }: { editor: Editor }) {
             )}
           >
             <LinkIcon className="size-4" />
+          </button>
+          <button
+            type="button"
+            aria-label="Clear formatting"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => editor.chain().focus().unsetAllMarks().run()}
+            className="rounded-md p-1.5 hover:bg-accent hover:text-accent-foreground"
+          >
+            <RemoveFormatting className="size-4" />
           </button>
           {state.table && (
             <>

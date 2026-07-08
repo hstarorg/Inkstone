@@ -1,11 +1,14 @@
+import { useState } from "react";
 import {
   EditorContent,
   ReactNodeViewRenderer,
   useEditor,
+  useEditorState,
+  type Editor,
   type JSONContent,
 } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { Placeholder } from "@tiptap/extensions";
+import { CharacterCount, Placeholder } from "@tiptap/extensions";
 import Typography from "@tiptap/extension-typography";
 import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
 import { TableKit } from "@tiptap/extension-table";
@@ -26,6 +29,8 @@ import { RicherEditorBubbleMenu } from "./bubble-menu";
 import { Callout } from "./callout";
 import { CodeBlockView } from "./code-block-view";
 import { MarkdownClipboard } from "./markdown-clipboard";
+import { Search } from "./search";
+import { SearchPanel } from "./search-panel";
 import { SlashCommand } from "./slash-menu";
 import "./richer-editor.css";
 
@@ -43,8 +48,22 @@ export interface RicherEditorProps {
   editable?: boolean;
   autofocus?: boolean;
   placeholder?: string;
+  showCharacterCount?: boolean;
   className?: string;
   contentClassName?: string;
+}
+
+function CharacterCountBadge({ editor }: { editor: Editor }) {
+  const characters = useEditorState({
+    editor,
+    selector: ({ editor }) => editor.storage.characterCount.characters(),
+  });
+
+  return (
+    <div className="pointer-events-none absolute right-4 bottom-2 z-30 rounded-md bg-background/80 px-1.5 py-0.5 text-xs text-muted-foreground">
+      {characters} characters
+    </div>
+  );
 }
 
 export function RicherEditor({
@@ -53,9 +72,12 @@ export function RicherEditor({
   editable = true,
   autofocus = false,
   placeholder = "Start writing…",
+  showCharacterCount = true,
   className,
   contentClassName,
 }: RicherEditorProps) {
+  const [searchOpen, setSearchOpen] = useState(false);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -72,6 +94,8 @@ export function RicherEditor({
       DetailsContent,
       Typography,
       Placeholder.configure({ placeholder }),
+      CharacterCount,
+      Search,
       Callout,
       SlashCommand,
       NodeRange,
@@ -95,7 +119,18 @@ export function RicherEditor({
   });
 
   return (
-    <>
+    <div
+      className={cn("relative h-full", className)}
+      onKeyDown={(event) => {
+        if (
+          (event.metaKey || event.ctrlKey) &&
+          event.key.toLowerCase() === "f"
+        ) {
+          event.preventDefault();
+          setSearchOpen(true);
+        }
+      }}
+    >
       {editor && editable && <RicherEditorBubbleMenu editor={editor} />}
       {editor && editable && (
         <DragHandle editor={editor}>
@@ -104,10 +139,17 @@ export function RicherEditor({
           </div>
         </DragHandle>
       )}
-      <EditorContent
-        editor={editor}
-        className={cn("h-full overflow-y-auto", className)}
-      />
-    </>
+      {editor && searchOpen && (
+        <SearchPanel
+          editor={editor}
+          onClose={() => {
+            setSearchOpen(false);
+            editor.commands.focus();
+          }}
+        />
+      )}
+      <EditorContent editor={editor} className="h-full overflow-y-auto" />
+      {editor && showCharacterCount && <CharacterCountBadge editor={editor} />}
+    </div>
   );
 }

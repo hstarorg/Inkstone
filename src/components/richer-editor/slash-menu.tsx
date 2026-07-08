@@ -30,7 +30,7 @@ const COMMANDS: SlashCommandItem[] = [
   {
     key: "text",
     label: "Text",
-    keywords: "paragraph plain",
+    keywords: "paragraph plain 正文 文本 zhengwen wenben",
     icon: Pilcrow,
     run: (editor, range) =>
       editor.chain().focus().deleteRange(range).setParagraph().run(),
@@ -38,7 +38,7 @@ const COMMANDS: SlashCommandItem[] = [
   {
     key: "h1",
     label: "Heading 1",
-    keywords: "h1 title",
+    keywords: "h1 title 一级标题 标题 biaoti yiji",
     icon: Heading1,
     run: (editor, range) =>
       editor.chain().focus().deleteRange(range).setHeading({ level: 1 }).run(),
@@ -46,7 +46,7 @@ const COMMANDS: SlashCommandItem[] = [
   {
     key: "h2",
     label: "Heading 2",
-    keywords: "h2 subtitle",
+    keywords: "h2 subtitle 二级标题 标题 biaoti erji",
     icon: Heading2,
     run: (editor, range) =>
       editor.chain().focus().deleteRange(range).setHeading({ level: 2 }).run(),
@@ -54,7 +54,7 @@ const COMMANDS: SlashCommandItem[] = [
   {
     key: "h3",
     label: "Heading 3",
-    keywords: "h3",
+    keywords: "h3 三级标题 标题 biaoti sanji",
     icon: Heading3,
     run: (editor, range) =>
       editor.chain().focus().deleteRange(range).setHeading({ level: 3 }).run(),
@@ -62,7 +62,7 @@ const COMMANDS: SlashCommandItem[] = [
   {
     key: "bulletList",
     label: "Bullet list",
-    keywords: "ul unordered",
+    keywords: "ul unordered 无序列表 列表 liebiao wuxu",
     icon: List,
     run: (editor, range) =>
       editor.chain().focus().deleteRange(range).toggleBulletList().run(),
@@ -70,7 +70,7 @@ const COMMANDS: SlashCommandItem[] = [
   {
     key: "orderedList",
     label: "Ordered list",
-    keywords: "ol numbered",
+    keywords: "ol numbered 有序列表 列表 liebiao youxu",
     icon: ListOrdered,
     run: (editor, range) =>
       editor.chain().focus().deleteRange(range).toggleOrderedList().run(),
@@ -78,7 +78,7 @@ const COMMANDS: SlashCommandItem[] = [
   {
     key: "taskList",
     label: "Task list",
-    keywords: "todo checkbox check",
+    keywords: "todo checkbox check 任务 待办 清单 renwu daiban",
     icon: ListTodo,
     run: (editor, range) =>
       editor.chain().focus().deleteRange(range).toggleTaskList().run(),
@@ -86,7 +86,7 @@ const COMMANDS: SlashCommandItem[] = [
   {
     key: "table",
     label: "Table",
-    keywords: "grid rows columns",
+    keywords: "grid rows columns 表格 biaoge bg",
     icon: Table,
     run: (editor, range) =>
       editor
@@ -99,7 +99,7 @@ const COMMANDS: SlashCommandItem[] = [
   {
     key: "quote",
     label: "Quote",
-    keywords: "blockquote citation",
+    keywords: "blockquote citation 引用 yinyong",
     icon: TextQuote,
     run: (editor, range) =>
       editor.chain().focus().deleteRange(range).toggleBlockquote().run(),
@@ -107,7 +107,7 @@ const COMMANDS: SlashCommandItem[] = [
   {
     key: "codeBlock",
     label: "Code block",
-    keywords: "snippet pre fence",
+    keywords: "snippet pre fence 代码 代码块 daima",
     icon: Code,
     run: (editor, range) =>
       editor.chain().focus().deleteRange(range).toggleCodeBlock().run(),
@@ -115,7 +115,8 @@ const COMMANDS: SlashCommandItem[] = [
   {
     key: "callout",
     label: "Callout",
-    keywords: "info tip warning danger note admonition",
+    keywords:
+      "info tip warning danger note admonition 信息块 提示 xinxikuai tishi",
     icon: Info,
     run: (editor, range) =>
       editor.chain().focus().deleteRange(range).toggleCallout().run(),
@@ -123,7 +124,7 @@ const COMMANDS: SlashCommandItem[] = [
   {
     key: "details",
     label: "Toggle",
-    keywords: "details collapse fold",
+    keywords: "details collapse fold 折叠 zhedie",
     icon: ListCollapse,
     run: (editor, range) =>
       editor.chain().focus().deleteRange(range).setDetails().run(),
@@ -131,7 +132,7 @@ const COMMANDS: SlashCommandItem[] = [
   {
     key: "divider",
     label: "Divider",
-    keywords: "hr horizontal rule separator",
+    keywords: "hr horizontal rule separator 分割线 分隔线 fengexian fgx",
     icon: Minus,
     run: (editor, range) =>
       editor.chain().focus().deleteRange(range).setHorizontalRule().run(),

@@ -1,9 +1,90 @@
+/* Editing-oriented spacing: the typography plugin defaults target long-form
+   reading and are too loose for an editor. */
+.tiptap p {
+  margin-block: 0.4em;
+}
+
+.tiptap h1 {
+  margin-top: 1.3em;
+  margin-bottom: 0.45em;
+}
+
+.tiptap h2 {
+  margin-top: 1.1em;
+  margin-bottom: 0.4em;
+}
+
+.tiptap h3,
+.tiptap h4 {
+  margin-top: 0.9em;
+  margin-bottom: 0.35em;
+}
+
+.tiptap > :first-child {
+  margin-top: 0;
+}
+
+.tiptap :is(h1, h2, h3, h4) + :is(h1, h2, h3, h4) {
+  margin-top: 0.3em;
+}
+
+.tiptap ul,
+.tiptap ol {
+  margin-block: 0.4em;
+}
+
+.tiptap li {
+  margin-block: 0.15em;
+}
+
+.tiptap li p {
+  margin-block: 0.15em;
+}
+
+.tiptap li > ul,
+.tiptap li > ol {
+  margin-block: 0.15em;
+}
+
+.tiptap blockquote {
+  margin-block: 0.6em;
+}
+
+.tiptap blockquote > :first-child {
+  margin-top: 0;
+}
+
+.tiptap blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.tiptap .code-block {
+  margin-block: 0.6em;
+}
+
+.tiptap .code-block pre {
+  margin: 0;
+}
+
+.tiptap hr {
+  margin-block: 1.2em;
+}
+
 .tiptap p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
   height: 0;
   pointer-events: none;
   color: color-mix(in srgb, currentColor 35%, transparent);
+}
+
+.tiptap .search-match {
+  background: color-mix(in srgb, #facc15 40%, transparent);
+  border-radius: 0.1em;
+}
+
+.tiptap .search-match-active {
+  background: color-mix(in srgb, #f97316 55%, transparent);
 }
 
 .tiptap mark {
@@ -33,7 +114,12 @@
 }
 
 .tiptap ul[data-type="taskList"] li > div > p {
-  margin: 0.25em 0;
+  margin: 0.15em 0;
+}
+
+.tiptap ul[data-type="taskList"] li > div > ul,
+.tiptap ul[data-type="taskList"] li > div > ol {
+  margin-block: 0.15em;
 }
 
 .tiptap ul[data-type="taskList"] li[data-checked="true"] > div {
@@ -45,7 +131,7 @@
   border-collapse: collapse;
   table-layout: fixed;
   width: 100%;
-  margin: 1em 0;
+  margin: 0.6em 0;
 }
 
 .tiptap table td,
@@ -78,7 +164,7 @@
 .tiptap [data-type="callout"] {
   display: flex;
   gap: 0.5rem;
-  margin: 1em 0;
+  margin: 0.6em 0;
   padding: 0.6rem 0.75rem;
   border-left: 3px solid var(--callout-hue);
   border-radius: 0.5rem;
@@ -127,7 +213,7 @@
   border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
   border-radius: 0.5rem;
   padding: 0.5rem 0.75rem;
-  margin: 1em 0;
+  margin: 0.6em 0;
 }
 
 .tiptap [data-type="details"] > button {
