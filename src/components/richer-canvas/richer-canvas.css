@@ -1,0 +1,35 @@
+.richer-canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Embedded mode: hide Drawnix's standalone-app menu (open/save file, GitHub),
+   keep undo/redo. */
+.richer-canvas .app-toolbar .stack_horizontal > :first-child {
+  display: none;
+}
+
+/* Text metric baseline (14px/20px) must not be polluted by app-level
+   typography; re-assert it above app resets. */
+.richer-canvas .plait-text-container,
+.richer-canvas-preview .plait-text-container {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.richer-canvas-preview {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Preview is a full Drawnix instance (only it knows every element type,
+   e.g. freehand); hide all of its chrome. */
+.richer-canvas-preview .island,
+.richer-canvas-preview .pencil-mode-toolbar {
+  display: none !important;
+}

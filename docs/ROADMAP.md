@@ -36,49 +36,104 @@ MyVault/
 
 ### M0 · 脚手架（预计 0.5 周）
 
-- [ ] pnpm + Vite + React + TS 初始化，Tauri 2 接入，`pnpm tauri dev` 跑通
-- [ ] Tailwind + shadcn/ui 接入，基础布局壳（侧栏 + 主区）
-- [ ] 基础工程化：ESLint + Prettier + rustfmt + clippy，`pnpm check` 一键全查
-- [ ] GitHub Actions：lint + 前后端测试，macOS / Windows / Linux 三平台矩阵构建通过
+- [x] pnpm + Vite + React + TS 初始化，Tauri 2 接入，`pnpm tauri dev` 跑通（create-tauri-app 官方 CLI；`pnpm build` + `cargo check` 验证通过）
+- [x] 品牌 logo（`docs/assets/logo.svg`）与全平台应用图标（`pnpm tauri icon`）、web favicon —— 计划外提前完成
+- [x] Tailwind + shadcn/ui 接入，基础布局壳（侧栏 + 主区）（Tailwind v4 Vite 插件 + shadcn CLI，radix 基座 / Nova preset）
+- [x] 基础工程化：ESLint + Prettier + rustfmt + clippy，`pnpm check` 一键全查（ESLint 9 flat config + typescript-eslint；`@eslint/create-config` 向导不支持非交互，按官方文档手写）
+- [x] GitHub Actions：lint + 前后端测试，macOS / Windows / Linux 三平台矩阵构建（workflow 已就位，待首次 push 后在线验证）
 
 **验收**：新克隆的仓库按 README 三条命令内能跑起空窗口应用；三平台 CI 绿。
 
 ### M1 · Vault 与文档 CRUD（预计 1–1.5 周）
 
-- [ ] Rust：vault 创建/打开（记住最近路径）、`inkstone.json` 读写与版本校验
-- [ ] Rust：文档 list / read / write / delete / trash（软删除进回收目录）的 Tauri command，全部带单元测试
-- [ ] 前端：文档列表侧栏（先平铺，不做文件夹树）、新建/重命名/删除
-- [ ] Tiptap 接入：StarterKit 级别的编辑（标题、列表、粗斜体、代码块、引用）
-- [ ] 自动保存：防抖写盘 + 崩溃安全（先写临时文件再原子 rename）
-- [ ] 文档 JSON schema 定稿并写文档（`docs/FORMAT.md`）
+- [x] Rust：vault 创建/打开（记住最近路径，存 OS 配置目录）、`inkstone.json` 读写与版本校验
+- [x] Rust：文档 list / read / write / trash / restore 的 Tauri command，12 个单元测试全过（含损坏文件、版本超限、未知字段保真、孤儿 tmp 清扫）
+- [x] 前端：欢迎页（打开/新建 vault）、文档列表侧栏、新建/删除（重命名 = 改首行，标题派生）
+- [x] Tiptap 接入：StarterKit 级别的编辑（M0 后已远超此范围）
+- [x] 自动保存：500ms 防抖写盘 + 切换/删除时 flush + 原子写崩溃安全
+- [x] 文档 JSON schema 定稿并写文档（`docs/FORMAT.md`，已评审）
 
 **验收**：断网、杀进程、重启后无数据丢失；手工构造损坏 JSON 时应用报错而非崩溃。
 
-### M2 · 编辑器完善（预计 1 周）
+### M2 · 编辑器能力（核心，分批实现）
 
-- [ ] 常用扩展：表格、任务列表、高亮、水平线、链接
-- [ ] Slash 菜单（`/` 插入块）
-- [ ] 图片：粘贴/拖入 → 存入 `assets/`（内容寻址去重）→ 文档内引用渲染
-- [ ] 标题层级生成文档大纲面板
-- [ ] 中英文界面文案抽离（先只做中文，留 i18n 结构）
+> 编辑器是产品核心。能力基线对标 Notion（块模型/交互）、语雀（中文场景的富内容块）、YouMind（Markdown 优先的干净写作面）。
+> 全部实现在 `richer-editor` 模块内，保持业务隔离。AI 辅助与协同类能力按非目标排除。
+> 已具备：StarterKit 基础块与行内标记、Markdown 快捷输入、气泡工具栏（块级切换 + 标记 + 链接 popover）、代码块语法高亮（lowlight）、Placeholder、智能排版。
 
-**验收**：把一篇含图片/表格/代码的真实笔记从 Obsidian 手工搬入，编辑体验无明显缺口。
+**P0 · 结构与输入基线**
+
+- [x] Slash 菜单：`/` 唤起块插入器，支持关键词过滤、键盘导航（12 种块类型）
+- [x] 表格：表头、行列增删（气泡栏表格操作组）；单元格对齐并入 P2 表格进阶
+- [x] 任务列表（可勾选，支持嵌套）
+- [x] Callout 信息块：info / tip / warn / danger 变体（点击图标循环切换，slash 菜单插入）
+- [x] 折叠块（toggle/details，标题 + 可折叠内容，保留开合状态）
+- [x] 高亮标记：`==text==` 快捷输入 + 气泡栏 5 色色板
+- [x] 图片：粘贴/拖入 → `assets/` 内容寻址去重 → 文档存 `asset://` 引用；拖拽手柄缩放，宽度持久化（说明文字 → P2 打磨）
+- [x] 块拖拽手柄：拖动重排、块选中（官方 DragHandle + NodeRange）
+- [x] Markdown 互操作：粘贴 Markdown 解析（启发式识别）、复制纯文本即 Markdown（官方 `@tiptap/markdown` + 自定义剪贴板扩展；callout/details 序列化留 M7 导出时补）
+
+**P1 · 写作辅助**
+
+- [x] 查找替换（Cmd/Ctrl+F 唤起，逐个跳转/替换/全部替换，命中高亮）
+- [x] 字数统计（右下角常驻徽标，可用 `showCharacterCount` 关闭）
+- [x] Slash 菜单中文关键词与拼音别名（如 `/表格`、`/biaoge`）
+- [x] 清除格式（气泡栏按钮，`unsetAllMarks`）
+
+**P2 · 体验打磨**
+
+- [ ] 大纲面板：标题层级、点击跳转
+- [ ] 文档内 TOC 块
+- [ ] 多栏布局（columns）
+- [x] 表格进阶：合并/拆分单元格（气泡栏，不可用时禁用态）、列宽拖拽（官方 resizable）
+- [x] 专注/打字机模式：非当前段落淡出（装饰实现，同 search.ts 插件状态模式）+ 光标居中滚动，编辑器内左下角图标切换
+- [x] 段落对齐（左/中/右，官方 TextAlign，气泡栏新增一组）
+- [x] 文本颜色（气泡栏色板，与高亮同交互，官方 TextStyle + Color）
+- [x] 可选固定工具栏：undo/redo、标题下拉（原生 select）、对齐、文本颜色，`showToolbar` prop 控制，默认关闭
+- [ ] 界面文案抽离（全英文，见 AGENTS.md 工程约定；留 i18n 结构）
+
+**P3 · 富内容块（低优先级，按需再排期）**
+
+- [ ] 数学公式：行内 `$x$` + 块级（KaTeX）
+- [ ] Mermaid 图表块：源码编辑 + 渲染预览
+- [ ] 链接卡片/书签块：贴 URL 转卡片（本地抓取标题/摘要，做成可关闭的隐私开关）
+- [ ] 附件块：任意文件落 `assets/`，显示文件名/大小（依赖 M1 vault）
+- [ ] 视频/音频：本地文件嵌入播放
+- [ ] Emoji 选择器（`:` 触发）
+
+**明确排除或归属其他里程碑**
+
+- AI 写作/润色、AI 生成图片 → 非目标
+- 评论、协同光标、分享发布 → 非目标
+- 数据库/多维表（Notion database、语雀数据表）→ 超出个人文档定位，不做
+- 格式刷、行高/段落缩进 → 不做（保持文档语义化，不引入排版属性；Notion 亦无）
+- Status 标签块 → 不做（低频，Callout 可替代）
+- 文档历史版本（语雀 latest version）→ 非编辑器职责，属存储层，M6 后评估
+- 画布/白板块 → M3（Plait）
+- 双链 `[[`、反链、标签 → M4
+- Markdown/HTML 全库导出 → M7
+
+**验收**：P0 完成后——把一篇含图片/表格/代码/callout 的真实笔记从 Notion 或语雀手工搬入，编辑体验无明显缺口；P1 完成后——含公式和 Mermaid 的技术笔记可完整表达。
 
 ### M3 · Plait 画布节点（预计 1.5–2 周，含技术验证）
 
-- [ ] **技术 spike（先做，1–2 天）**：独立 demo 验证 Plait React 组件的嵌入、JSON 序列化/反序列化、PNG 导出。**手感不达标则触发备选方案评审（Excalidraw / 自研），不要带病进主线**
-- [ ] 定义画布窄接口：`load(json) / save(): json / exportPNG()`，Plait 只是接口后的实现
-- [ ] Tiptap 自定义节点 + NodeView：文档内插入画布，行内只读预览 + 全屏编辑两种模式
-- [ ] 存储策略：画布场景 JSON 始终内联在文档节点属性里（单文件、单路径）；画布内插入的图片一律存 `assets/`（内容寻址），场景里只存引用，保证内联 JSON 是纯矢量数据
-- [ ] 画布内脑图、流程图、手绘三类元素混排可用；撤销/重做与文档编辑器互不干扰
+- [x] **技术 spike：GO**。`@drawnix/drawnix`（npm 预发布版）+ Plait 0.89.x 验证通过：嵌入渲染、脑图/图形/画笔、序列化往返均可用。产出六条嵌入契约：①三份 CSS 须全引（board/text/drawnix）②隐藏独立应用菜单 ③容器 overflow-hidden ④CSS exports 缺失需 patch ⑤未声明依赖需显式装 ⑥文本度量基准（14px/20px）不可被应用样式污染。风险记录：预发布包工程粗糙（6 处打包缺口），对冲 = 版本锁定 + pnpm patch + 窄接口 + MIT 可 fork
+- [x] 画布窄接口：`richer-canvas` 模块（`RicherCanvas` 编辑 + `CanvasPreview` 只读预览，`defaultValue/onChange(scene)`），六条嵌入契约内化；`exportPNG()` 待补
+- [x] Tiptap `canvas` 节点 + NodeView：`/canvas` 插入，行内只读预览（320px，指针事件屏蔽）+ 点击全屏编辑（Done 提交 / Discard 放弃 / Esc=Done）
+- [x] 存储策略：场景 JSON 内联节点 `attrs.scene`，随文档落盘（画布内图片改走 assets 引用待做——Drawnix 图片当前为 base64 内嵌，见下条）
+- [ ] 画布内图片走 `assets/` 引用（Drawnix 默认 base64 内嵌，违反 FORMAT.md 约束，需接管其图片插入路径）
+- [x] 撤销/重做隔离：全屏编辑器内部历史独立，Done 提交为编辑器单一撤销步
+- [x] 画布块交互：单击选中（Backspace/Delete 删除）、双击进入编辑、悬停工具条（编辑/删除图标）
+- [x] 白屏修复：预览改用完整 Drawnix 实例（认识 freehand 等全部元素类型）+ `CanvasErrorBoundary` 兜底，单个画布崩溃不影响文档其余部分
+- [ ] **已知问题**：全屏编辑器内脑图节点，选中已有节点后按 Enter 需按两次才进入文字编辑（`insertSiblingNode` 走 `setTimeout` 延迟 `editTopic`）。已排查 StrictMode 双调用、Tiptap 焦点争抢两个假设，均已修复对应机制但问题依旧，怀疑是 Plait 自身在任意嵌入场景下的固有行为（未最终确认，需要下次找一段专门时间对比 spike 页在完全相同操作序列下的表现 + 浏览器控制台报错定位）。不阻塞主线，双击直接进入文字编辑作为当前可用的替代路径。
 
 **验收**：一篇文档内嵌两个画布，混排编辑、保存、重启恢复、导出 PNG 全部正常。
 
 ### M4 · 搜索与知识库（预计 1 周）
 
-- [ ] SQLite FTS5 索引：文档保存时增量更新，启动时校验、可全量重建
-- [ ] **中文分词**：FTS5 默认分词器不切中文，采用 trigram tokenizer 起步，效果不够再评估 jieba 方案 —— 用一组中文查询用例做基准测试
-- [ ] 全局快速切换/搜索面板（Cmd/Ctrl+K：标题模糊匹配 + 全文结果）
+- [x] SQLite FTS5 索引：保存/新建/删除/恢复时增量更新，打开 vault 时全量重建（rusqlite bundled）
+- [x] **中文分词**：trigram tokenizer；≥3 字符走 FTS MATCH，1–2 字符（常见中文双字词）回退 LIKE 扫描；测试覆盖中英文长短词
+- [x] 全局搜索面板（Cmd/Ctrl+K：标题 + 全文，命中片段高亮，键盘导航）
 - [ ] 标签（文档属性面板）与标签筛选
 - [ ] 双链：`[[` 引用其他文档、反向链接面板（画布内文本暂不参与索引，记为已知限制）
 
@@ -86,14 +141,26 @@ MyVault/
 
 ### M5 · 静态加密（预计 1.5 周）
 
-- [ ] 密钥体系：主密码 → Argon2id → 主密钥；每文档随机密钥，XChaCha20-Poly1305 信封加密
-- [ ] 恢复码：创建加密 vault 时生成一次性恢复码（第二把包裹主密钥的钥匙），强制用户确认已保存
-- [ ] Vault 级加密开关：仅在创建时选择（明文 vault 可整体迁移为加密 vault，反向导出为明文属于"导出"功能）
-- [ ] 锁定/解锁 UX：启动解锁、手动锁定、闲置自动锁定；锁定时内存密钥清零（zeroize）
-- [ ] 加密文件格式定稿写入 `docs/FORMAT.md`（含 formatVersion、KDF 参数、nonce 布局）
-- [ ] 威胁模型文档：明确防什么（设备失窃、云端窥探）不防什么（解锁状态下的内存取证、键盘记录）
+- [x] 密钥体系：主密码 → Argon2id → 主密钥；每文档随机 DEK，XChaCha20-Poly1305 信封加密（三层信封：password/recovery → KEK → MK → 每文档 DEK）
+- [x] 恢复码：创建加密 vault 时生成一次性恢复码（20 字节 CSPRNG，Crockford Base32 展示），前端强制"我已保存"确认后才进入 vault
+- [x] Vault 级加密开关：仅在创建时选择（`vault_create(path, password?)`），新建 vault 界面二选一
+- [x] 锁定/解锁 UX：启动自动检测锁定态、手动锁定按钮、密码/恢复码两种解锁路径；锁定时会话态清零（`Zeroizing`）。闲置自动锁定留待后续
+- [x] 加密文件格式定稿写入 `docs/FORMAT.md`（formatVersion、KDF 参数、nonce 布局、二进制头部偏移表），已实现验证一致
+- [x] 索引加密：`.inkstone/index.db` 加密 vault 下用 SQLCipher（HKDF 派生独立索引密钥），明文 vault 不变
+- [ ] 威胁模型文档：明确防什么（设备失窃、云端窥探）不防什么（解锁状态下的内存取证、键盘记录）——待补独立文档
+- [ ] **已知缺口**：加密 vault 内嵌图片目前无法在前端显示——`asset_read` 后端命令已就绪（返回解密后 base64），但前端仍用 `convertFileSrc` 直读文件（无法解密 `.enc`），需要改造成 data URL 或自定义协议
+- [ ] 闲置自动锁定（超时后自动 `vault_lock`）——留待后续打磨
+- [ ] **已知缺口**：明文 vault 无法迁移为加密 vault，加密与否只能在创建时选择。计划中的实现方式是"复制到新 vault"（选已有明文 vault + 目标新目录 + 密码，逐篇解密读出、加密写入新目录，旧 vault 原样保留不动，比就地转换更安全）——按需排期
+- [x] `inkstone.json` 自愈备份：每次写入 manifest 时在 `.inkstone/inkstone.json.bak` 同步一份；`open`/`unlock`/`change_password` 发现主文件缺失时先从备份自动恢复再继续。误删 `inkstone.json` 从"永久丢失全部数据"降级为"下次打开自动修复"（双双丢失才是真正不可恢复，边界情况已测试覆盖）
+- [x] 回收站 UI + 删除确认：`docs::list_trash`/`doc_list_trash` 命令列出 `.trash/` 下的文档；侧栏新增"Trash"面板可逐篇 Restore；`trashDoc` 前增加确认弹窗，防止误删无法挽回
+- [x] 新建加密 vault 增加"确认密码"栏：两次密码不一致时禁用创建按钮 + 提交前二次校验，避免密码打错却在创建时无从察觉
+- [x] 应用关闭前强制落盘：监听 Tauri `onCloseRequested`，flush 未写入的防抖编辑后再放行关闭，避免 500ms 防抖窗口内退出丢失最后几次按键
+- [x] 启动自动重开"最近 vault"失败时不再静默吞错误：欢迎屏会显示"Could not reopen your last vault: ..."，而不是一片空白
+- [x] 改密码功能补前端入口：侧栏新增"Change master password"面板（新密码 + 确认二次输入），后端 `vault_change_password` 命令从"实现了但摸不到"变为可用功能
+- [x] 改密码补当前密码校验：`vault_change_password` 此前信任缓存的会话 MK 就允许改密，导致解锁后离开电脑的 vault 可被任何人改密码锁死原主人；改为要求传入 `current_password` 并通过 `vault::unlock_with_password` 重新验证后才重包裹 MK，前端面板同步加"Current master password"输入栏
+- [x] 恢复码关闭窗口保护：恢复码仅存在于内存中，若确认保存前关闭窗口即永久丢失；`onCloseRequested` 监听中检测到恢复码确认屏尚未通过时直接阻止关闭并弹窗提示，而非放行后静默丢失
 
-**验收**：加密 vault 的所有文件用 `xxd` 检视无明文泄漏（含文件名）；错误密码有明确提示；改主密码不重写文档本体（只重包裹密钥）。
+**验收**：加密 vault 的所有文件（文档/资产/索引）用 `xxd` 检视无明文泄漏，Rust 单元测试覆盖（58 个测试含加密路径的明文泄漏检测、manifest 自愈）；错误密码/恢复码有明确报错；改主密码不重写文档本体（只重包裹 MK，`change_password` 已测试验证，且需先验证当前密码）。
 
 ### M6 · 同步（预计 2 周）
 
@@ -119,14 +186,14 @@ MyVault/
 
 ## 主要风险与对冲
 
-| 风险 | 对冲 |
-|---|---|
-| Plait 成熟度不足、文档少 | M3 spike 前置做 go/no-go 决策；画布窄接口保证可整体替换；MIT 可 fork |
-| FTS5 中文检索质量 | trigram 起步 + 基准用例集，预留 jieba/tantivy 升级路径 |
-| 加密格式返工代价高 | M5 前先写格式文档评审再写代码；所有格式带版本号 |
-| WebDAV 服务端行为不一致 | 至少两家真实服务端做集成测试；`put` 的乐观锁语义降级方案（ETag 缺失时退回整库锁文件） |
-| 单人项目范围蔓延 | 非目标清单 + 每里程碑验收标准；新想法一律进 backlog 不插队 |
-| Linux WebView（webkit2gtk）渲染/IME 怪癖 | CI 三平台构建从 M0 开始；M3 画布 spike 与 M7 冒烟均覆盖 Linux |
+| 风险                                     | 对冲                                                                                  |
+| ---------------------------------------- | ------------------------------------------------------------------------------------- |
+| Plait 成熟度不足、文档少                 | M3 spike 前置做 go/no-go 决策；画布窄接口保证可整体替换；MIT 可 fork                  |
+| FTS5 中文检索质量                        | trigram 起步 + 基准用例集，预留 jieba/tantivy 升级路径                                |
+| 加密格式返工代价高                       | M5 前先写格式文档评审再写代码；所有格式带版本号                                       |
+| WebDAV 服务端行为不一致                  | 至少两家真实服务端做集成测试；`put` 的乐观锁语义降级方案（ETag 缺失时退回整库锁文件） |
+| 单人项目范围蔓延                         | 非目标清单 + 每里程碑验收标准；新想法一律进 backlog 不插队                            |
+| Linux WebView（webkit2gtk）渲染/IME 怪癖 | CI 三平台构建从 M0 开始；M3 画布 spike 与 M7 冒烟均覆盖 Linux                         |
 
 ## 已决策
 
