@@ -16,6 +16,7 @@ import {
   ListTodo,
   Minus,
   Pilcrow,
+  Shapes,
   Table,
   TextQuote,
 } from "lucide-react";
@@ -111,6 +112,14 @@ const COMMANDS: SlashCommandItem[] = [
     icon: Code,
     run: (editor, range) =>
       editor.chain().focus().deleteRange(range).toggleCodeBlock().run(),
+  },
+  {
+    key: "canvas",
+    label: "Canvas",
+    keywords: "draw board whiteboard mind 画布 白板 脑图 手绘 huaban baiban",
+    icon: Shapes,
+    run: (editor, range) =>
+      editor.chain().focus().deleteRange(range).insertCanvas().run(),
   },
   {
     key: "callout",

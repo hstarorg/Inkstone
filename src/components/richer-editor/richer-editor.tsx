@@ -33,6 +33,7 @@ import {
 } from "./asset-image";
 import { RicherEditorBubbleMenu } from "./bubble-menu";
 import { Callout } from "./callout";
+import { CanvasNode } from "./canvas-node";
 import { CodeBlockView } from "./code-block-view";
 import { MarkdownClipboard } from "./markdown-clipboard";
 import { Search } from "./search";
@@ -109,6 +110,7 @@ export function RicherEditor({
       CharacterCount,
       Search,
       Callout,
+      CanvasNode,
       SlashCommand,
       NodeRange,
       Markdown,

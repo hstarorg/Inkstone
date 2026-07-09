@@ -117,11 +117,12 @@ MyVault/
 
 ### M3 · Plait 画布节点（预计 1.5–2 周，含技术验证）
 
-- [ ] **技术 spike（先做，1–2 天）**：独立 demo 验证 Plait React 组件的嵌入、JSON 序列化/反序列化、PNG 导出。**手感不达标则触发备选方案评审（Excalidraw / 自研），不要带病进主线**
-- [ ] 定义画布窄接口：`load(json) / save(): json / exportPNG()`，Plait 只是接口后的实现
-- [ ] Tiptap 自定义节点 + NodeView：文档内插入画布，行内只读预览 + 全屏编辑两种模式
-- [ ] 存储策略：画布场景 JSON 始终内联在文档节点属性里（单文件、单路径）；画布内插入的图片一律存 `assets/`（内容寻址），场景里只存引用，保证内联 JSON 是纯矢量数据
-- [ ] 画布内脑图、流程图、手绘三类元素混排可用；撤销/重做与文档编辑器互不干扰
+- [x] **技术 spike：GO**。`@drawnix/drawnix`（npm 预发布版）+ Plait 0.89.x 验证通过：嵌入渲染、脑图/图形/画笔、序列化往返均可用。产出六条嵌入契约：①三份 CSS 须全引（board/text/drawnix）②隐藏独立应用菜单 ③容器 overflow-hidden ④CSS exports 缺失需 patch ⑤未声明依赖需显式装 ⑥文本度量基准（14px/20px）不可被应用样式污染。风险记录：预发布包工程粗糙（6 处打包缺口），对冲 = 版本锁定 + pnpm patch + 窄接口 + MIT 可 fork
+- [x] 画布窄接口：`richer-canvas` 模块（`RicherCanvas` 编辑 + `CanvasPreview` 只读预览，`defaultValue/onChange(scene)`），六条嵌入契约内化；`exportPNG()` 待补
+- [x] Tiptap `canvas` 节点 + NodeView：`/canvas` 插入，行内只读预览（320px，指针事件屏蔽）+ 点击全屏编辑（Done 提交 / Discard 放弃 / Esc=Done）
+- [x] 存储策略：场景 JSON 内联节点 `attrs.scene`，随文档落盘（画布内图片改走 assets 引用待做——Drawnix 图片当前为 base64 内嵌，见下条）
+- [ ] 画布内图片走 `assets/` 引用（Drawnix 默认 base64 内嵌，违反 FORMAT.md 约束，需接管其图片插入路径）
+- [x] 撤销/重做隔离：全屏编辑器内部历史独立，Done 提交为编辑器单一撤销步
 
 **验收**：一篇文档内嵌两个画布，混排编辑、保存、重启恢复、导出 PNG 全部正常。
 

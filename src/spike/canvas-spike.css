@@ -1,5 +1,0 @@
-/* Embedded mode: hide Drawnix's standalone-app menu (open/save file, GitHub),
-   keep undo/redo. */
-.app-toolbar .stack_horizontal > :first-child {
-  display: none;
-}

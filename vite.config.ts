@@ -13,6 +13,13 @@ export default defineConfig(async () => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    include: [
+      "@drawnix/drawnix",
+      "@plait-board/markdown-to-drawnix",
+      "@plait-board/mermaid-to-drawnix",
+    ],
+  },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //

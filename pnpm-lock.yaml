@@ -4,13 +4,18 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@drawnix/drawnix@0.4.0-0': 2468ed1ec9162418056d4d3c0b3ae49755530c6ab171a9d4a77c25617363de08
+  '@plait-board/react-board@0.4.0-0': 0886641845a2e7e83c65fa54550424b4c3134a3d65a608b7d06c40d473463572
+  '@plait-board/react-text@0.4.0-0': a5fb70627791876e8e3cd5c2a9d643e8651e0f93d1ac6bf001220d982c3f9f0f
+
 importers:
 
   .:
     dependencies:
       '@drawnix/drawnix':
         specifier: 0.4.0-0
-        version: 0.4.0-0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        version: 0.4.0-0(patch_hash=2468ed1ec9162418056d4d3c0b3ae49755530c6ab171a9d4a77c25617363de08)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@floating-ui/react':
         specifier: ^0.27.19
         version: 0.27.19(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -25,10 +30,10 @@ importers:
         version: 0.0.7
       '@plait-board/react-board':
         specifier: 0.4.0-0
-        version: 0.4.0-0(immer@10.2.0)(is-hotkey@0.2.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        version: 0.4.0-0(patch_hash=0886641845a2e7e83c65fa54550424b4c3134a3d65a608b7d06c40d473463572)(immer@10.2.0)(is-hotkey@0.2.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@plait-board/react-text':
         specifier: 0.4.0-0
-        version: 0.4.0-0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        version: 0.4.0-0(patch_hash=a5fb70627791876e8e3cd5c2a9d643e8651e0f93d1ac6bf001220d982c3f9f0f)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@plait/common':
         specifier: 0.89.2
         version: 0.89.2
@@ -4466,7 +4471,7 @@ snapshots:
 
   '@dotenvx/primitives@0.8.0': {}
 
-  '@drawnix/drawnix@0.4.0-0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@drawnix/drawnix@0.4.0-0(patch_hash=2468ed1ec9162418056d4d3c0b3ae49755530c6ab171a9d4a77c25617363de08)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@floating-ui/react': 0.26.28(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@plait-board/markdown-to-drawnix': 0.0.7
@@ -4720,7 +4725,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@plait-board/react-board@0.4.0-0(immer@10.2.0)(is-hotkey@0.2.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@plait-board/react-board@0.4.0-0(patch_hash=0886641845a2e7e83c65fa54550424b4c3134a3d65a608b7d06c40d473463572)(immer@10.2.0)(is-hotkey@0.2.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@plait/common': 0.89.2
       '@plait/core': 0.89.2(immer@10.2.0)(is-hotkey@0.2.0)
@@ -4736,7 +4741,7 @@ snapshots:
       - react
       - react-dom
 
-  '@plait-board/react-text@0.4.0-0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@plait-board/react-text@0.4.0-0(patch_hash=a5fb70627791876e8e3cd5c2a9d643e8651e0f93d1ac6bf001220d982c3f9f0f)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@plait/common': 0.89.2
       '@plait/text-plugins': 0.89.2

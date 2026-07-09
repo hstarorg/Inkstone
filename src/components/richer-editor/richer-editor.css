@@ -344,6 +344,37 @@
   outline-offset: 1px;
 }
 
+.tiptap [data-type="canvas"] {
+  margin-block: 0.6em;
+}
+
+.tiptap .canvas-frame {
+  position: relative;
+  height: 320px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-radius: 0.5rem;
+}
+
+.tiptap .canvas-frame-selected {
+  outline: 2px solid color-mix(in srgb, currentColor 45%, transparent);
+  outline-offset: 1px;
+}
+
+.tiptap .canvas-frame .canvas-toolbar {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.tiptap .canvas-frame:hover .canvas-toolbar,
+.tiptap .canvas-frame-selected .canvas-toolbar {
+  opacity: 1;
+}
+
 .tiptap .code-block {
   position: relative;
 }

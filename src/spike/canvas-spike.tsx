@@ -1,26 +1,21 @@
 import { useRef, useState } from "react";
-import { Drawnix } from "@drawnix/drawnix";
-import "../../node_modules/@plait-board/react-board/index.css";
-import "../../node_modules/@plait-board/react-text/index.css";
-import "../../node_modules/@drawnix/drawnix/index.css";
-import "./canvas-spike.css";
-import type { PlaitElement } from "@plait/core";
+import { RicherCanvas, type CanvasScene } from "@/components/richer-canvas";
 
 const STORAGE_KEY = "canvas-spike-value";
 
-function loadInitial(): PlaitElement[] {
+function loadInitial(): CanvasScene {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (!stored) return [];
   try {
-    return JSON.parse(stored) as PlaitElement[];
+    return JSON.parse(stored) as CanvasScene;
   } catch {
     return [];
   }
 }
 
 export function CanvasSpike() {
-  const [initialValue, setInitialValue] = useState<PlaitElement[]>(loadInitial);
-  const valueRef = useRef<PlaitElement[]>(initialValue);
+  const [initialValue, setInitialValue] = useState<CanvasScene>(loadInitial);
+  const valueRef = useRef<CanvasScene>(initialValue);
   const [status, setStatus] = useState("ready");
   const [generation, setGeneration] = useState(0);
 
@@ -48,7 +43,7 @@ export function CanvasSpike() {
   return (
     <div className="flex h-screen flex-col">
       <div className="flex items-center gap-2 border-b p-2 text-sm">
-        <strong>Canvas spike (Drawnix)</strong>
+        <strong>Canvas spike (RicherCanvas)</strong>
         <button className="rounded border px-2 py-0.5" onClick={save}>
           Save JSON
         </button>
@@ -60,12 +55,12 @@ export function CanvasSpike() {
         </button>
         <span className="text-muted-foreground">{status}</span>
       </div>
-      <div className="relative min-h-0 flex-1 overflow-hidden">
-        <Drawnix
+      <div className="min-h-0 flex-1">
+        <RicherCanvas
           key={generation}
-          value={initialValue}
-          onChange={(data) => {
-            valueRef.current = data.children;
+          defaultValue={initialValue}
+          onChange={(scene) => {
+            valueRef.current = scene;
           }}
         />
       </div>

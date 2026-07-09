@@ -1,2 +1,6 @@
 allowBuilds:
   esbuild: true
+patchedDependencies:
+  '@drawnix/drawnix@0.4.0-0': patches/@drawnix__drawnix@0.4.0-0.patch
+  '@plait-board/react-board@0.4.0-0': patches/@plait-board__react-board@0.4.0-0.patch
+  '@plait-board/react-text@0.4.0-0': patches/@plait-board__react-text@0.4.0-0.patch
