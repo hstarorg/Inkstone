@@ -1,16 +1,28 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { FolderOpen, FolderPlus, Plus, Trash2 } from "lucide-react";
+import {
+  FolderOpen,
+  FolderPlus,
+  Lock,
+  Plus,
+  Trash2,
+  Unlock,
+} from "lucide-react";
 import { RicherEditor, type JSONContent } from "@/components/richer-editor";
 import { SearchPalette } from "@/components/search-palette";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { vaultApi, type DocMeta } from "@/lib/vault";
+import { vaultApi, type DocMeta, type VaultInfo } from "@/lib/vault";
 
 interface ActiveDoc {
   id: string;
   content: JSONContent;
+}
+
+interface PendingRecovery {
+  info: VaultInfo;
+  code: string;
 }
 
 function collectText(node?: JSONContent): string {
@@ -49,11 +61,23 @@ function toBase64(buffer: ArrayBuffer): string {
 const ASSET_PREFIX = "asset://";
 
 function App() {
-  const [vault, setVault] = useState<string | null>(null);
+  const [vaultInfo, setVaultInfo] = useState<VaultInfo | null>(null);
+  const [locked, setLocked] = useState(false);
   const [docs, setDocs] = useState<DocMeta[]>([]);
   const [activeDoc, setActiveDoc] = useState<ActiveDoc | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+
+  const [pendingVaultPath, setPendingVaultPath] = useState<string | null>(null);
+  const [encryptNewVault, setEncryptNewVault] = useState(false);
+  const [newVaultPassword, setNewVaultPassword] = useState("");
+  const [pendingRecovery, setPendingRecovery] =
+    useState<PendingRecovery | null>(null);
+
+  const [unlockSecret, setUnlockSecret] = useState("");
+  const [useRecoveryCode, setUseRecoveryCode] = useState(false);
+
+  const vault = vaultInfo?.path ?? null;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -85,14 +109,30 @@ function App() {
     }
   }, [vault]);
 
-  const loadVault = useCallback(async (path: string) => {
-    const info = await vaultApi.open(path);
+  const loadVaultDocs = useCallback(async (info: VaultInfo) => {
     const list = await vaultApi.listDocs(info.path);
-    setVault(info.path);
+    setVaultInfo(info);
+    setLocked(false);
     setDocs(list.docs);
     setActiveDoc(null);
     setError(list.warnings[0] ?? null);
   }, []);
+
+  const loadVault = useCallback(
+    async (path: string) => {
+      const info = await vaultApi.open(path);
+      if (info.encryption !== "none") {
+        const unlocked = await vaultApi.isUnlocked(info.path);
+        if (!unlocked) {
+          setVaultInfo(info);
+          setLocked(true);
+          return;
+        }
+      }
+      await loadVaultDocs(info);
+    },
+    [loadVaultDocs],
+  );
 
   useEffect(() => {
     vaultApi
@@ -107,12 +147,64 @@ function App() {
       const path = await openDialog({ directory: true });
       if (typeof path !== "string") return;
       if (mode === "create") {
-        await vaultApi.create(path);
+        setEncryptNewVault(false);
+        setNewVaultPassword("");
+        setPendingVaultPath(path);
+        return;
       }
       await loadVault(path);
     } catch (pickError) {
       setError(String(pickError));
     }
+  };
+
+  const confirmCreateVault = async () => {
+    if (!pendingVaultPath) return;
+    setError(null);
+    try {
+      const { info, recoveryCode } = await vaultApi.create(
+        pendingVaultPath,
+        encryptNewVault ? newVaultPassword : undefined,
+      );
+      setPendingVaultPath(null);
+      setNewVaultPassword("");
+      if (recoveryCode) {
+        setPendingRecovery({ info, code: recoveryCode });
+      } else {
+        await loadVaultDocs(info);
+      }
+    } catch (createError) {
+      setError(String(createError));
+    }
+  };
+
+  const confirmRecoverySaved = async () => {
+    if (!pendingRecovery) return;
+    await loadVaultDocs(pendingRecovery.info);
+    setPendingRecovery(null);
+  };
+
+  const handleUnlock = async () => {
+    if (!vaultInfo) return;
+    setError(null);
+    try {
+      const info = useRecoveryCode
+        ? await vaultApi.unlockWithRecoveryCode(vaultInfo.path, unlockSecret)
+        : await vaultApi.unlock(vaultInfo.path, unlockSecret);
+      setUnlockSecret("");
+      await loadVaultDocs(info);
+    } catch (unlockError) {
+      setError(String(unlockError));
+    }
+  };
+
+  const handleLock = async () => {
+    if (!vaultInfo) return;
+    await flushPendingWrite();
+    await vaultApi.lock(vaultInfo.path);
+    setDocs([]);
+    setActiveDoc(null);
+    setLocked(true);
   };
 
   const selectDoc = async (id: string) => {
@@ -202,7 +294,73 @@ function App() {
     };
   };
 
-  if (!vault) {
+  if (pendingRecovery) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-foreground">
+        <Lock className="size-8" />
+        <h1 className="text-lg font-semibold">Save your recovery code</h1>
+        <p className="max-w-md text-center text-sm text-muted-foreground">
+          If you forget your password, this is the only other way back into this
+          vault. Write it down or store it somewhere safe — it will not be shown
+          again.
+        </p>
+        <p className="rounded-md border bg-muted px-4 py-3 font-mono text-sm tracking-wide">
+          {pendingRecovery.code}
+        </p>
+        <Button onClick={() => void confirmRecoverySaved()}>
+          I've saved my recovery code
+        </Button>
+      </div>
+    );
+  }
+
+  if (pendingVaultPath) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-foreground">
+        <FolderPlus className="size-8" />
+        <h1 className="text-lg font-semibold">New vault</h1>
+        <p className="max-w-sm text-center text-sm text-muted-foreground">
+          {vaultName(pendingVaultPath)}
+        </p>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={encryptNewVault}
+            onChange={(event) => setEncryptNewVault(event.target.checked)}
+          />
+          Encrypt this vault with a password
+        </label>
+        {encryptNewVault && (
+          <input
+            type="password"
+            autoFocus
+            value={newVaultPassword}
+            onChange={(event) => setNewVaultPassword(event.target.value)}
+            placeholder="Master password"
+            className="w-64 rounded-md border bg-transparent px-3 py-1.5 text-sm"
+          />
+        )}
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => setPendingVaultPath(null)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => void confirmCreateVault()}
+            disabled={encryptNewVault && newVaultPassword.length === 0}
+          >
+            Create vault
+          </Button>
+        </div>
+        {error && (
+          <p className="max-w-md text-center text-sm text-destructive">
+            {error}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  if (!vaultInfo) {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background text-foreground">
         <img src="/logo.svg" alt="Inkstone" className="size-20 rounded-2xl" />
@@ -228,9 +386,51 @@ function App() {
     );
   }
 
+  if (locked) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-foreground">
+        <Lock className="size-8" />
+        <h1 className="text-lg font-semibold">{vaultName(vaultInfo.path)}</h1>
+        <p className="text-sm text-muted-foreground">This vault is locked.</p>
+        <input
+          type={useRecoveryCode ? "text" : "password"}
+          autoFocus
+          value={unlockSecret}
+          onChange={(event) => setUnlockSecret(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") void handleUnlock();
+          }}
+          placeholder={useRecoveryCode ? "Recovery code" : "Master password"}
+          className="w-64 rounded-md border bg-transparent px-3 py-1.5 text-sm"
+        />
+        <Button onClick={() => void handleUnlock()}>
+          <Unlock /> Unlock
+        </Button>
+        <button
+          type="button"
+          onClick={() => {
+            setUseRecoveryCode((value) => !value);
+            setUnlockSecret("");
+            setError(null);
+          }}
+          className="text-xs text-muted-foreground underline"
+        >
+          {useRecoveryCode
+            ? "Use password instead"
+            : "Use recovery code instead"}
+        </button>
+        {error && (
+          <p className="max-w-md text-center text-sm text-destructive">
+            {error}
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-background text-foreground">
-      {searchOpen && (
+      {searchOpen && vault && (
         <SearchPalette
           vault={vault}
           onOpen={(id) => void selectDoc(id)}
@@ -241,8 +441,18 @@ function App() {
         <div className="flex items-center gap-2 px-4 py-3">
           <img src="/logo.svg" alt="" className="size-6 rounded" />
           <span className="flex-1 truncate text-sm font-semibold">
-            {vaultName(vault)}
+            {vaultName(vaultInfo.path)}
           </span>
+          {vaultInfo.encryption !== "none" && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Lock vault"
+              onClick={() => void handleLock()}
+            >
+              <Lock />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"

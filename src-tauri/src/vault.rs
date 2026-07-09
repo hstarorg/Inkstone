@@ -1,3 +1,6 @@
+use crate::crypto::{self, Argon2Params, MK_LEN, SALT_LEN};
+use base64::engine::general_purpose::STANDARD as BASE64;
+use base64::Engine;
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::fs;
@@ -7,6 +10,7 @@ use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
 
 pub const VAULT_FORMAT_VERSION: u64 = 1;
+const KEYS_FORMAT_VERSION: u64 = 1;
 
 const VAULT_MANIFEST: &str = "inkstone.json";
 const SUB_DIRS: [&str; 4] = ["docs", "assets", ".trash", ".inkstone"];
@@ -133,6 +137,226 @@ pub fn create(path: &str) -> Result<VaultInfo, String> {
     info_from_manifest(&root, &manifest)
 }
 
+fn envelope_to_json(envelope: &crypto::Envelope) -> Value {
+    json!({
+        "nonce": BASE64.encode(envelope.nonce),
+        "ciphertext": BASE64.encode(&envelope.ciphertext),
+    })
+}
+
+fn envelope_from_json(value: &Value, what: &str) -> Result<(Vec<u8>, Vec<u8>), String> {
+    let nonce = value
+        .get("nonce")
+        .and_then(Value::as_str)
+        .ok_or_else(|| format!("missing {what} nonce"))?;
+    let ciphertext = value
+        .get("ciphertext")
+        .and_then(Value::as_str)
+        .ok_or_else(|| format!("missing {what} ciphertext"))?;
+    let nonce = BASE64
+        .decode(nonce)
+        .map_err(|error| format!("invalid {what} nonce: {error}"))?;
+    let ciphertext = BASE64
+        .decode(ciphertext)
+        .map_err(|error| format!("invalid {what} ciphertext: {error}"))?;
+    Ok((nonce, ciphertext))
+}
+
+fn open_wrapped_key(value: &Value, kek: &[u8; 32], what: &str) -> Result<[u8; MK_LEN], String> {
+    let (nonce, ciphertext) = envelope_from_json(value, what)?;
+    let nonce: [u8; crypto::NONCE_LEN] = nonce
+        .try_into()
+        .map_err(|_| format!("invalid {what} nonce length"))?;
+    let mk = crypto::open(kek, &nonce, &ciphertext)?;
+    mk.try_into()
+        .map_err(|_| format!("invalid {what}: wrong key length after decryption"))
+}
+
+/// Creates a new vault protected by a master password. Returns the vault
+/// info plus a one-time recovery code the caller MUST show the user — it is
+/// never stored or derivable again once this call returns.
+pub fn create_encrypted(path: &str, password: &str) -> Result<(VaultInfo, String), String> {
+    let root = PathBuf::from(path);
+    let manifest_path = root.join(VAULT_MANIFEST);
+    if manifest_path.exists() {
+        return Err(format!("{} is already a vault", root.display()));
+    }
+    fs::create_dir_all(&root)
+        .map_err(|error| format!("failed to create vault directory: {error}"))?;
+
+    let mk = crypto::random_bytes::<MK_LEN>();
+
+    let password_salt = crypto::random_bytes::<SALT_LEN>();
+    let password_params = Argon2Params::DEFAULT;
+    let kek_password =
+        crypto::derive_kek_from_password(password, &password_salt, &password_params)?;
+    let password_envelope = crypto::seal(&kek_password, &mk);
+
+    let (recovery_code, recovery_bytes) = crypto::generate_recovery_code();
+    let recovery_salt = crypto::random_bytes::<SALT_LEN>();
+    let kek_recovery = crypto::derive_kek_from_recovery(&recovery_bytes, &recovery_salt);
+    let recovery_envelope = crypto::seal(&kek_recovery, &mk);
+
+    let manifest = json!({
+        "formatVersion": VAULT_FORMAT_VERSION,
+        "vaultId": new_id(),
+        "createdAt": now_rfc3339(),
+        "encryption": "v1",
+        "keys": {
+            "formatVersion": KEYS_FORMAT_VERSION,
+            "password": {
+                "kdf": "argon2id",
+                "kdfParams": {
+                    "memoryKib": password_params.memory_kib,
+                    "iterations": password_params.iterations,
+                    "parallelism": password_params.parallelism,
+                },
+                "salt": BASE64.encode(password_salt),
+                "wrappedKey": envelope_to_json(&password_envelope),
+            },
+            "recovery": {
+                "kdf": "hkdf-sha256",
+                "salt": BASE64.encode(recovery_salt),
+                "wrappedKey": envelope_to_json(&recovery_envelope),
+            },
+        },
+    });
+    write_atomic(
+        &manifest_path,
+        serde_json::to_string_pretty(&manifest)
+            .map_err(|error| error.to_string())?
+            .as_bytes(),
+    )?;
+    ensure_layout(&root)?;
+    let info = info_from_manifest(&root, &manifest)?;
+    Ok((info, recovery_code))
+}
+
+enum UnlockPath {
+    Password,
+    Recovery,
+}
+
+fn unlock_with(path: &str, secret: &str, which: UnlockPath) -> Result<[u8; MK_LEN], String> {
+    let root = PathBuf::from(path);
+    let manifest_path = root.join(VAULT_MANIFEST);
+    let manifest = read_json(&manifest_path)?;
+    if manifest.get("encryption").and_then(Value::as_str) != Some("v1") {
+        return Err(format!("{} is not an encrypted vault", root.display()));
+    }
+    let keys = manifest
+        .get("keys")
+        .ok_or_else(|| "vault manifest is missing its keys section".to_string())?;
+
+    match which {
+        UnlockPath::Password => {
+            let entry = keys
+                .get("password")
+                .ok_or_else(|| "vault manifest is missing the password key entry".to_string())?;
+            let salt: [u8; SALT_LEN] = BASE64
+                .decode(
+                    entry
+                        .get("salt")
+                        .and_then(Value::as_str)
+                        .ok_or_else(|| "missing password salt".to_string())?,
+                )
+                .map_err(|error| format!("invalid password salt: {error}"))?
+                .try_into()
+                .map_err(|_| "invalid password salt length".to_string())?;
+            let params = entry
+                .get("kdfParams")
+                .ok_or_else(|| "missing password KDF params".to_string())?;
+            let argon2_params = Argon2Params {
+                memory_kib: params
+                    .get("memoryKib")
+                    .and_then(Value::as_u64)
+                    .ok_or_else(|| "missing memoryKib".to_string())?
+                    as u32,
+                iterations: params
+                    .get("iterations")
+                    .and_then(Value::as_u64)
+                    .ok_or_else(|| "missing iterations".to_string())?
+                    as u32,
+                parallelism: params
+                    .get("parallelism")
+                    .and_then(Value::as_u64)
+                    .ok_or_else(|| "missing parallelism".to_string())?
+                    as u32,
+            };
+            let kek = crypto::derive_kek_from_password(secret, &salt, &argon2_params)?;
+            let wrapped = entry
+                .get("wrappedKey")
+                .ok_or_else(|| "missing password wrappedKey".to_string())?;
+            open_wrapped_key(wrapped, &kek, "password-wrapped key")
+        }
+        UnlockPath::Recovery => {
+            let entry = keys
+                .get("recovery")
+                .ok_or_else(|| "vault manifest is missing the recovery key entry".to_string())?;
+            let salt: [u8; SALT_LEN] = BASE64
+                .decode(
+                    entry
+                        .get("salt")
+                        .and_then(Value::as_str)
+                        .ok_or_else(|| "missing recovery salt".to_string())?,
+                )
+                .map_err(|error| format!("invalid recovery salt: {error}"))?
+                .try_into()
+                .map_err(|_| "invalid recovery salt length".to_string())?;
+            let recovery_bytes = crypto::parse_recovery_code(secret)
+                .map_err(|_| "invalid recovery code".to_string())?;
+            let kek = crypto::derive_kek_from_recovery(&recovery_bytes, &salt);
+            let wrapped = entry
+                .get("wrappedKey")
+                .ok_or_else(|| "missing recovery wrappedKey".to_string())?;
+            open_wrapped_key(wrapped, &kek, "recovery-wrapped key")
+        }
+    }
+    .map_err(|_| "incorrect password or recovery code".to_string())
+}
+
+/// Unlocks an encrypted vault with the master password, returning the
+/// decrypted master key. The caller is responsible for holding it (e.g. in
+/// session state) and zeroizing it on lock.
+pub fn unlock_with_password(path: &str, password: &str) -> Result<[u8; MK_LEN], String> {
+    unlock_with(path, password, UnlockPath::Password)
+}
+
+/// Unlocks an encrypted vault with the one-time recovery code.
+pub fn unlock_with_recovery_code(path: &str, recovery_code: &str) -> Result<[u8; MK_LEN], String> {
+    unlock_with(path, recovery_code, UnlockPath::Recovery)
+}
+
+/// Re-wraps the master key under a new password (e.g. changing the master
+/// password). Does not touch the recovery-code envelope or any document.
+pub fn change_password(path: &str, mk: &[u8; MK_LEN], new_password: &str) -> Result<(), String> {
+    let root = PathBuf::from(path);
+    let manifest_path = root.join(VAULT_MANIFEST);
+    let mut manifest = read_json(&manifest_path)?;
+
+    let salt = crypto::random_bytes::<SALT_LEN>();
+    let params = Argon2Params::DEFAULT;
+    let kek = crypto::derive_kek_from_password(new_password, &salt, &params)?;
+    let envelope = crypto::seal(&kek, mk);
+
+    manifest["keys"]["password"] = json!({
+        "kdf": "argon2id",
+        "kdfParams": {
+            "memoryKib": params.memory_kib,
+            "iterations": params.iterations,
+            "parallelism": params.parallelism,
+        },
+        "salt": BASE64.encode(salt),
+        "wrappedKey": envelope_to_json(&envelope),
+    });
+    write_atomic(
+        &manifest_path,
+        serde_json::to_string_pretty(&manifest)
+            .map_err(|error| error.to_string())?
+            .as_bytes(),
+    )
+}
+
 pub fn open(path: &str) -> Result<VaultInfo, String> {
     let root = PathBuf::from(path);
     let manifest_path = root.join(VAULT_MANIFEST);
@@ -153,6 +377,72 @@ pub fn open(path: &str) -> Result<VaultInfo, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn create_encrypted_then_unlock_with_password() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().to_str().unwrap().to_string();
+        let (info, _recovery) = create_encrypted(&path, "correct horse battery staple").unwrap();
+        assert_eq!(info.encryption, "v1");
+
+        let mk = unlock_with_password(&path, "correct horse battery staple").unwrap();
+        assert_eq!(mk.len(), MK_LEN);
+    }
+
+    #[test]
+    fn unlock_with_password_rejects_wrong_password() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().to_str().unwrap().to_string();
+        create_encrypted(&path, "correct horse battery staple").unwrap();
+        assert!(unlock_with_password(&path, "wrong password").is_err());
+    }
+
+    #[test]
+    fn create_encrypted_recovery_code_unlocks_to_same_key() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().to_str().unwrap().to_string();
+        let (_info, recovery) = create_encrypted(&path, "correct horse battery staple").unwrap();
+
+        let via_password = unlock_with_password(&path, "correct horse battery staple").unwrap();
+        let via_recovery = unlock_with_recovery_code(&path, &recovery).unwrap();
+        assert_eq!(via_password, via_recovery);
+    }
+
+    #[test]
+    fn unlock_with_recovery_code_rejects_wrong_code() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().to_str().unwrap().to_string();
+        create_encrypted(&path, "correct horse battery staple").unwrap();
+        assert!(
+            unlock_with_recovery_code(&path, "0000-0000-0000-0000-0000-0000-0000-0000").is_err()
+        );
+    }
+
+    #[test]
+    fn change_password_rewraps_without_changing_master_key() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().to_str().unwrap().to_string();
+        let (_info, recovery) = create_encrypted(&path, "old password").unwrap();
+        let mk = unlock_with_password(&path, "old password").unwrap();
+
+        change_password(&path, &mk, "new password").unwrap();
+
+        assert!(unlock_with_password(&path, "old password").is_err());
+        let mk_after = unlock_with_password(&path, "new password").unwrap();
+        assert_eq!(mk, mk_after);
+
+        // Recovery path is untouched by a password change.
+        let via_recovery = unlock_with_recovery_code(&path, &recovery).unwrap();
+        assert_eq!(mk, via_recovery);
+    }
+
+    #[test]
+    fn unlock_rejects_plaintext_vault() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().to_str().unwrap().to_string();
+        create(&path).unwrap();
+        assert!(unlock_with_password(&path, "anything").is_err());
+    }
 
     #[test]
     fn create_then_open_roundtrip() {

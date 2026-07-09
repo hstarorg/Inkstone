@@ -8,6 +8,11 @@ export interface VaultInfo {
   encryption: string;
 }
 
+export interface VaultCreateResult {
+  info: VaultInfo;
+  recoveryCode: string | null;
+}
+
 export interface DocMeta {
   id: string;
   title: string;
@@ -28,9 +33,27 @@ export interface DocFile {
   content: JSONContent;
 }
 
+export interface SearchHit {
+  id: string;
+  title: string;
+  snippet: string;
+}
+
 export const vaultApi = {
-  create: (path: string) => invoke<VaultInfo>("vault_create", { path }),
+  create: (path: string, password?: string) =>
+    invoke<VaultCreateResult>("vault_create", { path, password }),
   open: (path: string) => invoke<VaultInfo>("vault_open", { path }),
+  unlock: (path: string, password: string) =>
+    invoke<VaultInfo>("vault_unlock", { path, password }),
+  unlockWithRecoveryCode: (path: string, recoveryCode: string) =>
+    invoke<VaultInfo>("vault_unlock_with_recovery_code", {
+      path,
+      recoveryCode,
+    }),
+  lock: (path: string) => invoke<void>("vault_lock", { path }),
+  isUnlocked: (path: string) => invoke<boolean>("vault_is_unlocked", { path }),
+  changePassword: (path: string, newPassword: string) =>
+    invoke<void>("vault_change_password", { path, newPassword }),
   recent: () => invoke<string | null>("vault_recent"),
   listDocs: (vault: string) => invoke<DocList>("doc_list", { vault }),
   createDoc: (vault: string) => invoke<DocFile>("doc_create", { vault }),
@@ -47,9 +70,3 @@ export const vaultApi = {
   searchDocs: (vault: string, query: string) =>
     invoke<SearchHit[]>("search_docs", { vault, query }),
 };
-
-export interface SearchHit {
-  id: string;
-  title: string;
-  snippet: string;
-}

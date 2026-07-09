@@ -1,3 +1,4 @@
+use crate::crypto::{self, MK_LEN};
 use crate::docs;
 use rusqlite::Connection;
 use serde::Serialize;
@@ -17,11 +18,20 @@ pub struct SearchHit {
     pub snippet: String,
 }
 
-fn open(vault: &str) -> Result<Connection, String> {
+fn open(vault: &str, key: Option<&[u8; MK_LEN]>, vault_id: &str) -> Result<Connection, String> {
     let dir = Path::new(vault).join(".inkstone");
     std::fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
     let conn = Connection::open(dir.join("index.db"))
         .map_err(|error| format!("failed to open index: {error}"))?;
+    if let Some(mk) = key {
+        let index_key = crypto::derive_index_key(mk, vault_id);
+        let hex: String = index_key.iter().map(|b| format!("{b:02x}")).collect();
+        // SQLCipher's raw-key syntax (`x'...'`) must not be escaped like a
+        // regular string literal, so this is issued directly rather than via
+        // a bound parameter. `hex` is our own hex encoding, not user input.
+        conn.execute_batch(&format!("PRAGMA key = \"x'{hex}'\";"))
+            .map_err(|error| format!("failed to unlock index: {error}"))?;
+    }
     conn.execute_batch(
         "CREATE VIRTUAL TABLE IF NOT EXISTS docs_fts
          USING fts5(id UNINDEXED, title, body, tokenize='trigram');",
@@ -45,8 +55,15 @@ fn body_text(content: &Value) -> String {
     body
 }
 
-pub fn index_doc(vault: &str, id: &str, title: &str, content: &Value) -> Result<(), String> {
-    let conn = open(vault)?;
+pub fn index_doc(
+    vault: &str,
+    id: &str,
+    title: &str,
+    content: &Value,
+    key: Option<&[u8; MK_LEN]>,
+    vault_id: &str,
+) -> Result<(), String> {
+    let conn = open(vault, key, vault_id)?;
     upsert(&conn, id, title, &body_text(content))
 }
 
@@ -61,19 +78,24 @@ fn upsert(conn: &Connection, id: &str, title: &str, body: &str) -> Result<(), St
     Ok(())
 }
 
-pub fn remove_doc(vault: &str, id: &str) -> Result<(), String> {
-    let conn = open(vault)?;
+pub fn remove_doc(
+    vault: &str,
+    id: &str,
+    key: Option<&[u8; MK_LEN]>,
+    vault_id: &str,
+) -> Result<(), String> {
+    let conn = open(vault, key, vault_id)?;
     conn.execute("DELETE FROM docs_fts WHERE id = ?1", [id])
         .map_err(|error| error.to_string())?;
     Ok(())
 }
 
-pub fn rebuild(vault: &str) -> Result<(), String> {
-    let conn = open(vault)?;
+pub fn rebuild(vault: &str, key: Option<&[u8; MK_LEN]>, vault_id: &str) -> Result<(), String> {
+    let conn = open(vault, key, vault_id)?;
     conn.execute("DELETE FROM docs_fts", [])
         .map_err(|error| error.to_string())?;
-    for meta in docs::list(vault)?.docs {
-        let doc = docs::read(vault, &meta.id)?;
+    for meta in docs::list(vault, key)?.docs {
+        let doc = docs::read(vault, &meta.id, key)?;
         let body = doc.get("content").map(body_text).unwrap_or_default();
         upsert(&conn, &meta.id, &meta.title, &body)?;
     }
@@ -112,12 +134,17 @@ fn like_snippet(body: &str, query: &str) -> String {
     format!("{prefix}{HIGHLIGHT_OPEN}{matched}{HIGHLIGHT_CLOSE}{suffix}")
 }
 
-pub fn search(vault: &str, query: &str) -> Result<Vec<SearchHit>, String> {
+pub fn search(
+    vault: &str,
+    query: &str,
+    key: Option<&[u8; MK_LEN]>,
+    vault_id: &str,
+) -> Result<Vec<SearchHit>, String> {
     let query = query.trim();
     if query.is_empty() {
         return Ok(Vec::new());
     }
-    let conn = open(vault)?;
+    let conn = open(vault, key, vault_id)?;
 
     if query.chars().count() >= 3 {
         let fts_query = format!("\"{}\"", query.replace('"', "\"\""));
@@ -189,18 +216,31 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().to_str().unwrap().to_string();
         vault::create(&path).unwrap();
-        let doc = docs::create(&path).unwrap();
+        let doc = docs::create(&path, None).unwrap();
         let id = doc["id"].as_str().unwrap().to_string();
-        docs::write_content(&path, &id, heading_doc(title)).unwrap();
+        docs::write_content(&path, &id, heading_doc(title), None).unwrap();
         (dir, path, id)
+    }
+
+    fn test_encrypted_vault_with_doc(
+        title: &str,
+    ) -> (tempfile::TempDir, String, String, [u8; MK_LEN], String) {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().to_str().unwrap().to_string();
+        let (info, _recovery) = vault::create_encrypted(&path, "correct horse").unwrap();
+        let mk = vault::unlock_with_password(&path, "correct horse").unwrap();
+        let doc = docs::create(&path, Some(&mk)).unwrap();
+        let id = doc["id"].as_str().unwrap().to_string();
+        docs::write_content(&path, &id, heading_doc(title), Some(&mk)).unwrap();
+        (dir, path, id, mk, info.vault_id)
     }
 
     #[test]
     fn rebuild_and_fts_search() {
         let (_dir, vault, id) = test_vault_with_doc("Cloudflare deployment notes");
-        rebuild(&vault).unwrap();
+        rebuild(&vault, None, "").unwrap();
 
-        let hits = search(&vault, "deployment").unwrap();
+        let hits = search(&vault, "deployment", None, "").unwrap();
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].id, id);
         assert!(hits[0].snippet.contains('\u{1}'));
@@ -209,13 +249,13 @@ mod tests {
     #[test]
     fn chinese_trigram_and_short_query() {
         let (_dir, vault, id) = test_vault_with_doc("数据库高可用研究");
-        rebuild(&vault).unwrap();
+        rebuild(&vault, None, "").unwrap();
 
-        let long = search(&vault, "高可用研究").unwrap();
+        let long = search(&vault, "高可用研究", None, "").unwrap();
         assert_eq!(long.len(), 1);
         assert_eq!(long[0].id, id);
 
-        let short = search(&vault, "正文").unwrap();
+        let short = search(&vault, "正文", None, "").unwrap();
         assert_eq!(short.len(), 1);
         assert!(short[0].snippet.contains('\u{1}'));
     }
@@ -223,23 +263,55 @@ mod tests {
     #[test]
     fn incremental_index_and_remove() {
         let (_dir, vault, id) = test_vault_with_doc("first version");
-        rebuild(&vault).unwrap();
+        rebuild(&vault, None, "").unwrap();
 
         let updated = heading_doc("second edition");
-        docs::write_content(&vault, &id, updated.clone()).unwrap();
-        index_doc(&vault, &id, "second edition", &updated).unwrap();
+        docs::write_content(&vault, &id, updated.clone(), None).unwrap();
+        index_doc(&vault, &id, "second edition", &updated, None, "").unwrap();
 
-        assert!(search(&vault, "first version").unwrap().is_empty());
-        assert_eq!(search(&vault, "second edition").unwrap().len(), 1);
+        assert!(search(&vault, "first version", None, "")
+            .unwrap()
+            .is_empty());
+        assert_eq!(search(&vault, "second edition", None, "").unwrap().len(), 1);
 
-        remove_doc(&vault, &id).unwrap();
-        assert!(search(&vault, "second edition").unwrap().is_empty());
+        remove_doc(&vault, &id, None, "").unwrap();
+        assert!(search(&vault, "second edition", None, "")
+            .unwrap()
+            .is_empty());
     }
 
     #[test]
     fn empty_query_returns_nothing() {
         let (_dir, vault, _id) = test_vault_with_doc("anything");
-        rebuild(&vault).unwrap();
-        assert!(search(&vault, "  ").unwrap().is_empty());
+        rebuild(&vault, None, "").unwrap();
+        assert!(search(&vault, "  ", None, "").unwrap().is_empty());
+    }
+
+    #[test]
+    fn encrypted_rebuild_and_search() {
+        let (_dir, vault, id, mk, vault_id) =
+            test_encrypted_vault_with_doc("Cloudflare deployment notes");
+        rebuild(&vault, Some(&mk), &vault_id).unwrap();
+
+        let hits = search(&vault, "deployment", Some(&mk), &vault_id).unwrap();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].id, id);
+    }
+
+    #[test]
+    fn encrypted_index_has_no_plaintext_leakage_on_disk() {
+        let (_dir, vault, _id, mk, vault_id) =
+            test_encrypted_vault_with_doc("a very secret unique title");
+        rebuild(&vault, Some(&mk), &vault_id).unwrap();
+
+        let raw = std::fs::read(Path::new(&vault).join(".inkstone").join("index.db")).unwrap();
+        assert!(!raw.windows(6).any(|w| w == b"secret"));
+    }
+
+    #[test]
+    fn encrypted_search_fails_without_key() {
+        let (_dir, vault, _id, mk, vault_id) = test_encrypted_vault_with_doc("secret");
+        rebuild(&vault, Some(&mk), &vault_id).unwrap();
+        assert!(search(&vault, "secret", None, &vault_id).is_err());
     }
 }
