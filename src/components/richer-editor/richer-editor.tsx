@@ -42,6 +42,7 @@ import { MarkdownClipboard } from "./markdown-clipboard";
 import { Search } from "./search";
 import { SearchPanel } from "./search-panel";
 import { SlashCommand } from "./slash-menu";
+import { RicherEditorToolbar } from "./toolbar";
 import "./richer-editor.css";
 
 const lowlight = createLowlight(common);
@@ -59,6 +60,7 @@ export interface RicherEditorProps {
   autofocus?: boolean;
   placeholder?: string;
   showCharacterCount?: boolean;
+  showToolbar?: boolean;
   uploadImage?: UploadImage;
   resolveAssetSrc?: ResolveAssetSrc;
   className?: string;
@@ -85,6 +87,7 @@ export function RicherEditor({
   autofocus = false,
   placeholder = "Start writing…",
   showCharacterCount = true,
+  showToolbar = false,
   uploadImage,
   resolveAssetSrc = (src) => src,
   className,
@@ -170,7 +173,7 @@ export function RicherEditor({
 
   return (
     <div
-      className={cn("relative h-full", className)}
+      className={cn("relative flex h-full flex-col", className)}
       onKeyDown={(event) => {
         if (
           (event.metaKey || event.ctrlKey) &&
@@ -198,10 +201,13 @@ export function RicherEditor({
           }}
         />
       )}
+      {editor && editable && showToolbar && (
+        <RicherEditorToolbar editor={editor} />
+      )}
       <EditorContent
         ref={contentRef}
         editor={editor}
-        className="h-full overflow-y-auto"
+        className="min-h-0 flex-1 overflow-y-auto"
       />
       {editor && editable && (
         <button
