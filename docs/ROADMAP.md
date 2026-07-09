@@ -157,8 +157,10 @@ MyVault/
 - [x] 应用关闭前强制落盘：监听 Tauri `onCloseRequested`，flush 未写入的防抖编辑后再放行关闭，避免 500ms 防抖窗口内退出丢失最后几次按键
 - [x] 启动自动重开"最近 vault"失败时不再静默吞错误：欢迎屏会显示"Could not reopen your last vault: ..."，而不是一片空白
 - [x] 改密码功能补前端入口：侧栏新增"Change master password"面板（新密码 + 确认二次输入），后端 `vault_change_password` 命令从"实现了但摸不到"变为可用功能
+- [x] 改密码补当前密码校验：`vault_change_password` 此前信任缓存的会话 MK 就允许改密，导致解锁后离开电脑的 vault 可被任何人改密码锁死原主人；改为要求传入 `current_password` 并通过 `vault::unlock_with_password` 重新验证后才重包裹 MK，前端面板同步加"Current master password"输入栏
+- [x] 恢复码关闭窗口保护：恢复码仅存在于内存中，若确认保存前关闭窗口即永久丢失；`onCloseRequested` 监听中检测到恢复码确认屏尚未通过时直接阻止关闭并弹窗提示，而非放行后静默丢失
 
-**验收**：加密 vault 的所有文件（文档/资产/索引）用 `xxd` 检视无明文泄漏，Rust 单元测试覆盖（56 个测试含加密路径的明文泄漏检测、manifest 自愈）；错误密码/恢复码有明确报错；改主密码不重写文档本体（只重包裹 MK，`change_password` 已测试验证）。
+**验收**：加密 vault 的所有文件（文档/资产/索引）用 `xxd` 检视无明文泄漏，Rust 单元测试覆盖（58 个测试含加密路径的明文泄漏检测、manifest 自愈）；错误密码/恢复码有明确报错；改主密码不重写文档本体（只重包裹 MK，`change_password` 已测试验证，且需先验证当前密码）。
 
 ### M6 · 同步（预计 2 周）
 

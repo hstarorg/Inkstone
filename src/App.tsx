@@ -130,11 +130,25 @@ function App() {
     flushPendingWriteRef.current = flushPendingWrite;
   }, [flushPendingWrite]);
 
+  // The recovery code only ever exists in memory — if the window closes
+  // before the user acknowledges it, it is gone for good. Block closing
+  // outright rather than let it slip past silently.
+  const pendingRecoveryRef = useRef(pendingRecovery);
+  useEffect(() => {
+    pendingRecoveryRef.current = pendingRecovery;
+  }, [pendingRecovery]);
+
   useEffect(() => {
     let unlisten: (() => void) | undefined;
     void getCurrentWindow()
       .onCloseRequested(async (event) => {
         event.preventDefault();
+        if (pendingRecoveryRef.current) {
+          window.alert(
+            "Please save your recovery code before closing Inkstone — it will not be shown again.",
+          );
+          return;
+        }
         await flushPendingWriteRef.current();
         await getCurrentWindow().destroy();
       })

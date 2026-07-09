@@ -10,6 +10,7 @@ export function ChangePasswordPanel({
   vault: string;
   onClose: () => void;
 }) {
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -17,13 +18,13 @@ export function ChangePasswordPanel({
 
   const submit = async () => {
     if (newPassword !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError("New passwords do not match.");
       return;
     }
-    if (newPassword.length === 0) return;
+    if (currentPassword.length === 0 || newPassword.length === 0) return;
     setError(null);
     try {
-      await vaultApi.changePassword(vault, newPassword);
+      await vaultApi.changePassword(vault, currentPassword, newPassword);
       setDone(true);
     } catch (changeError) {
       setError(String(changeError));
@@ -60,6 +61,14 @@ export function ChangePasswordPanel({
             <input
               type="password"
               autoFocus
+              value={currentPassword}
+              onChange={(event) => setCurrentPassword(event.target.value)}
+              placeholder="Current master password"
+              className="rounded-md border bg-transparent px-3 py-1.5 text-sm"
+            />
+            <div className="my-1 h-px bg-border" />
+            <input
+              type="password"
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
               placeholder="New master password"
@@ -79,7 +88,9 @@ export function ChangePasswordPanel({
               <Button
                 onClick={() => void submit()}
                 disabled={
-                  newPassword.length === 0 || newPassword !== confirmPassword
+                  currentPassword.length === 0 ||
+                  newPassword.length === 0 ||
+                  newPassword !== confirmPassword
                 }
               >
                 Change password

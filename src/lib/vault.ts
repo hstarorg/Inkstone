@@ -52,8 +52,16 @@ export const vaultApi = {
     }),
   lock: (path: string) => invoke<void>("vault_lock", { path }),
   isUnlocked: (path: string) => invoke<boolean>("vault_is_unlocked", { path }),
-  changePassword: (path: string, newPassword: string) =>
-    invoke<void>("vault_change_password", { path, newPassword }),
+  changePassword: (
+    path: string,
+    currentPassword: string,
+    newPassword: string,
+  ) =>
+    invoke<void>("vault_change_password", {
+      path,
+      currentPassword,
+      newPassword,
+    }),
   recent: () => invoke<string | null>("vault_recent"),
   listDocs: (vault: string) => invoke<DocList>("doc_list", { vault }),
   listTrash: (vault: string) => invoke<DocList>("doc_list_trash", { vault }),

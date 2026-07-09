@@ -151,15 +151,17 @@ fn vault_is_unlocked(sessions: tauri::State<session::VaultSessions>, path: Strin
     sessions.is_unlocked(&path)
 }
 
+// Re-derives the master key from `current_password` rather than trusting the
+// cached session key — an attacker at an unlocked-but-unattended vault must
+// not be able to lock the real owner out by setting a password only they
+// know. Requires no unlocked session at all, only the current password.
 #[tauri::command]
 fn vault_change_password(
-    sessions: tauri::State<session::VaultSessions>,
     path: String,
+    current_password: String,
     new_password: String,
 ) -> Result<(), String> {
-    let mk = sessions
-        .get(&path)
-        .ok_or_else(|| "vault is locked".to_string())?;
+    let mk = vault::unlock_with_password(&path, &current_password)?;
     vault::change_password(&path, &mk, &new_password)
 }
 
