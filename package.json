@@ -44,6 +44,8 @@
     "@tiptap/extension-list": "^3.27.3",
     "@tiptap/extension-node-range": "^3.27.3",
     "@tiptap/extension-table": "^3.27.3",
+    "@tiptap/extension-text-align": "^3.27.3",
+    "@tiptap/extension-text-style": "^3.27.3",
     "@tiptap/extension-typography": "^3.27.3",
     "@tiptap/extensions": "^3.27.3",
     "@tiptap/markdown": "^3.27.3",

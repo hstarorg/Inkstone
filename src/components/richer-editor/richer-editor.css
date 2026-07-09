@@ -161,6 +161,30 @@
   pointer-events: none;
 }
 
+.tiptap .column-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: -2px;
+  right: -2px;
+  width: 4px;
+  background: color-mix(in srgb, currentColor 45%, transparent);
+  pointer-events: none;
+}
+
+.tiptap.resize-cursor {
+  cursor: col-resize;
+}
+
+.tiptap .focus-dim {
+  opacity: 0.3;
+  transition: opacity 0.25s ease;
+}
+
+.tiptap.focus-typewriter {
+  padding-top: 40vh;
+  padding-bottom: 40vh;
+}
+
 .tiptap [data-type="callout"] {
   display: flex;
   gap: 0.5rem;

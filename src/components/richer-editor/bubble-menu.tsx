@@ -3,6 +3,10 @@ import type { Editor } from "@tiptap/react";
 import { useEditorState } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  Baseline,
   Bold,
   Check,
   Code,
@@ -79,6 +83,30 @@ const BLOCK_ACTIONS: EditorAction[] = [
   },
 ];
 
+const ALIGN_ACTIONS: EditorAction[] = [
+  {
+    key: "alignLeft",
+    icon: AlignLeft,
+    label: "Align left",
+    isActive: (editor) => editor.isActive({ textAlign: "left" }),
+    toggle: (editor) => editor.chain().focus().setTextAlign("left").run(),
+  },
+  {
+    key: "alignCenter",
+    icon: AlignCenter,
+    label: "Align center",
+    isActive: (editor) => editor.isActive({ textAlign: "center" }),
+    toggle: (editor) => editor.chain().focus().setTextAlign("center").run(),
+  },
+  {
+    key: "alignRight",
+    icon: AlignRight,
+    label: "Align right",
+    isActive: (editor) => editor.isActive({ textAlign: "right" }),
+    toggle: (editor) => editor.chain().focus().setTextAlign("right").run(),
+  },
+];
+
 const MARK_ACTIONS: EditorAction[] = [
   {
     key: "bold",
@@ -151,10 +179,19 @@ const HIGHLIGHT_COLORS = [
   { name: "Orange", value: "#fdba74" },
 ];
 
+const TEXT_COLORS = [
+  { name: "Red", value: "#dc2626" },
+  { name: "Orange", value: "#ea580c" },
+  { name: "Green", value: "#16a34a" },
+  { name: "Blue", value: "#2563eb" },
+  { name: "Purple", value: "#9333ea" },
+];
+
 const TABLE_ACTIONS: {
   key: string;
   label: string;
   run: (e: Editor) => void;
+  canRun?: (e: Editor) => boolean;
 }[] = [
   {
     key: "addRow",
@@ -181,11 +218,24 @@ const TABLE_ACTIONS: {
     label: "Header",
     run: (e) => e.chain().focus().toggleHeaderRow().run(),
   },
+  {
+    key: "merge",
+    label: "Merge",
+    run: (e) => e.chain().focus().mergeCells().run(),
+    canRun: (e) => e.can().mergeCells(),
+  },
+  {
+    key: "split",
+    label: "Split",
+    run: (e) => e.chain().focus().splitCell().run(),
+    canRun: (e) => e.can().splitCell(),
+  },
 ];
 
 export function RicherEditorBubbleMenu({ editor }: { editor: Editor }) {
   const [linkOpen, setLinkOpen] = useState(false);
   const [highlightOpen, setHighlightOpen] = useState(false);
+  const [colorOpen, setColorOpen] = useState(false);
   const [url, setUrl] = useState("");
   const linkOpenRef = useRef(false);
 
@@ -198,8 +248,10 @@ export function RicherEditorBubbleMenu({ editor }: { editor: Editor }) {
     selector: ({ editor }) => ({
       blocks: BLOCK_ACTIONS.map((action) => action.isActive(editor)),
       marks: MARK_ACTIONS.map((action) => action.isActive(editor)),
+      aligns: ALIGN_ACTIONS.map((action) => action.isActive(editor)),
       link: editor.isActive("link"),
       highlight: editor.isActive("highlight"),
+      color: !!editor.getAttributes("textStyle").color,
       table: editor.isActive("table"),
       selectionEmpty: editor.state.selection.empty,
     }),
@@ -233,18 +285,22 @@ export function RicherEditorBubbleMenu({ editor }: { editor: Editor }) {
 
   const tableControls = (
     <>
-      {TABLE_ACTIONS.map((action) => (
-        <button
-          key={action.key}
-          type="button"
-          aria-label={action.label}
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => action.run(editor)}
-          className="rounded-md px-1.5 py-1 text-xs hover:bg-accent hover:text-accent-foreground"
-        >
-          {action.label}
-        </button>
-      ))}
+      {TABLE_ACTIONS.map((action) => {
+        const disabled = action.canRun ? !action.canRun(editor) : false;
+        return (
+          <button
+            key={action.key}
+            type="button"
+            aria-label={action.label}
+            disabled={disabled}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => action.run(editor)}
+            className="rounded-md px-1.5 py-1 text-xs hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-30"
+          >
+            {action.label}
+          </button>
+        );
+      })}
       <button
         type="button"
         aria-label="Delete table"
@@ -267,8 +323,41 @@ export function RicherEditorBubbleMenu({ editor }: { editor: Editor }) {
       }
       className="flex items-center gap-0.5 rounded-lg border bg-popover p-1 text-popover-foreground shadow-md"
     >
-      {state.table && state.selectionEmpty && !linkOpen && !highlightOpen ? (
+      {state.table &&
+      state.selectionEmpty &&
+      !linkOpen &&
+      !highlightOpen &&
+      !colorOpen ? (
         tableControls
+      ) : colorOpen ? (
+        <div className="flex items-center gap-1 px-1">
+          {TEXT_COLORS.map((color) => (
+            <button
+              key={color.value}
+              type="button"
+              aria-label={`Text color ${color.name}`}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => {
+                editor.chain().focus().setColor(color.value).run();
+                setColorOpen(false);
+              }}
+              className="size-5 rounded-full border border-black/10"
+              style={{ backgroundColor: color.value }}
+            />
+          ))}
+          <button
+            type="button"
+            aria-label="Remove text color"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => {
+              editor.chain().focus().unsetColor().run();
+              setColorOpen(false);
+            }}
+            className="rounded-md p-1.5 hover:bg-accent hover:text-accent-foreground"
+          >
+            <Trash2 className="size-4" />
+          </button>
+        </div>
       ) : highlightOpen ? (
         <div className="flex items-center gap-1 px-1">
           {HIGHLIGHT_COLORS.map((color) => (
@@ -358,6 +447,15 @@ export function RicherEditorBubbleMenu({ editor }: { editor: Editor }) {
             />
           ))}
           <div className="mx-0.5 h-5 w-px bg-border" />
+          {ALIGN_ACTIONS.map((action, index) => (
+            <ActionButton
+              key={action.key}
+              action={action}
+              active={state.aligns[index]}
+              editor={editor}
+            />
+          ))}
+          <div className="mx-0.5 h-5 w-px bg-border" />
           <button
             type="button"
             aria-label="Highlight"
@@ -370,6 +468,19 @@ export function RicherEditorBubbleMenu({ editor }: { editor: Editor }) {
             )}
           >
             <Highlighter className="size-4" />
+          </button>
+          <button
+            type="button"
+            aria-label="Text color"
+            aria-pressed={state.color}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => setColorOpen(true)}
+            className={cn(
+              "rounded-md p-1.5 hover:bg-accent hover:text-accent-foreground",
+              state.color && "bg-accent text-accent-foreground",
+            )}
+          >
+            <Baseline className="size-4" />
           </button>
           <button
             type="button"

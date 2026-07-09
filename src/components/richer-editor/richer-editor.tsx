@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   EditorContent,
   ReactNodeViewRenderer,
@@ -14,6 +14,8 @@ import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
 import { TableKit } from "@tiptap/extension-table";
 import { TaskItem, TaskList } from "@tiptap/extension-list";
 import Highlight from "@tiptap/extension-highlight";
+import TextAlign from "@tiptap/extension-text-align";
+import { TextStyle, Color } from "@tiptap/extension-text-style";
 import {
   Details,
   DetailsContent,
@@ -22,7 +24,7 @@ import {
 import NodeRange from "@tiptap/extension-node-range";
 import { Markdown } from "@tiptap/markdown";
 import { DragHandle } from "@tiptap/extension-drag-handle-react";
-import { GripVertical } from "lucide-react";
+import { Focus, GripVertical } from "lucide-react";
 import { common, createLowlight } from "lowlight";
 import { cn } from "@/lib/utils";
 import {
@@ -35,6 +37,7 @@ import { RicherEditorBubbleMenu } from "./bubble-menu";
 import { Callout } from "./callout";
 import { CanvasNode } from "./canvas-node";
 import { CodeBlockView } from "./code-block-view";
+import { FocusMode } from "./focus-mode";
 import { MarkdownClipboard } from "./markdown-clipboard";
 import { Search } from "./search";
 import { SearchPanel } from "./search-panel";
@@ -88,6 +91,8 @@ export function RicherEditor({
   contentClassName,
 }: RicherEditorProps) {
   const [searchOpen, setSearchOpen] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
     extensions: [
@@ -98,10 +103,17 @@ export function RicherEditor({
         link: { openOnClick: false },
       }),
       CodeBlock,
-      TableKit,
+      TableKit.configure({ table: { resizable: true } }),
       TaskList,
       TaskItem.configure({ nested: true }),
       Highlight.configure({ multicolor: true }),
+      TextStyle,
+      Color,
+      TextAlign.configure({
+        types: ["heading", "paragraph"],
+        alignments: ["left", "center", "right"],
+        defaultAlignment: "left",
+      }),
       Details.configure({ persist: true }),
       DetailsSummary,
       DetailsContent,
@@ -109,6 +121,7 @@ export function RicherEditor({
       Placeholder.configure({ placeholder }),
       CharacterCount,
       Search,
+      FocusMode,
       Callout,
       CanvasNode,
       SlashCommand,
@@ -131,6 +144,29 @@ export function RicherEditor({
       onChange?.(editor.getJSON());
     },
   });
+
+  useEffect(() => {
+    if (!editor) return;
+    editor.commands.setFocusMode(focusMode);
+    editor.view.dom.classList.toggle("focus-typewriter", focusMode);
+  }, [editor, focusMode]);
+
+  useEffect(() => {
+    if (!editor || !focusMode) return;
+    const recenter = () => {
+      const container = contentRef.current;
+      if (!container) return;
+      const cursorRect = editor.view.coordsAtPos(editor.state.selection.from);
+      const containerRect = container.getBoundingClientRect();
+      const target = containerRect.top + containerRect.height * 0.4;
+      container.scrollBy({ top: cursorRect.top - target, behavior: "smooth" });
+    };
+    editor.on("selectionUpdate", recenter);
+    recenter();
+    return () => {
+      editor.off("selectionUpdate", recenter);
+    };
+  }, [editor, focusMode]);
 
   return (
     <div
@@ -162,7 +198,25 @@ export function RicherEditor({
           }}
         />
       )}
-      <EditorContent editor={editor} className="h-full overflow-y-auto" />
+      <EditorContent
+        ref={contentRef}
+        editor={editor}
+        className="h-full overflow-y-auto"
+      />
+      {editor && editable && (
+        <button
+          type="button"
+          aria-label="Toggle focus mode"
+          aria-pressed={focusMode}
+          onClick={() => setFocusMode((value) => !value)}
+          className={cn(
+            "absolute bottom-2 left-4 z-30 rounded-md border bg-background/80 p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+            focusMode && "bg-accent text-accent-foreground",
+          )}
+        >
+          <Focus className="size-3.5" />
+        </button>
+      )}
       {editor && showCharacterCount && <CharacterCountBadge editor={editor} />}
     </div>
   );
