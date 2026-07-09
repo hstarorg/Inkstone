@@ -60,8 +60,15 @@ function toBase64(buffer: ArrayBuffer): string {
 
 const ASSET_PREFIX = "asset://";
 
+interface PreviousView {
+  info: VaultInfo;
+  docs: DocMeta[];
+  locked: boolean;
+}
+
 function App() {
   const [vaultInfo, setVaultInfo] = useState<VaultInfo | null>(null);
+  const [previousView, setPreviousView] = useState<PreviousView | null>(null);
   const [locked, setLocked] = useState(false);
   const [docs, setDocs] = useState<DocMeta[]>([]);
   const [activeDoc, setActiveDoc] = useState<ActiveDoc | null>(null);
@@ -205,6 +212,28 @@ function App() {
     setDocs([]);
     setActiveDoc(null);
     setLocked(true);
+  };
+
+  // Switching just shows the picker screen — it does not lock the vault or
+  // discard its state, so "Cancel" can return to it instantly.
+  const switchVault = async () => {
+    await flushPendingWrite();
+    if (vaultInfo) {
+      setPreviousView({ info: vaultInfo, docs, locked });
+    }
+    setVaultInfo(null);
+    setLocked(false);
+    setDocs([]);
+    setActiveDoc(null);
+    setError(null);
+  };
+
+  const cancelSwitch = () => {
+    if (!previousView) return;
+    setVaultInfo(previousView.info);
+    setDocs(previousView.docs);
+    setLocked(previousView.locked);
+    setPreviousView(null);
   };
 
   const selectDoc = async (id: string) => {
@@ -377,6 +406,11 @@ function App() {
             <FolderPlus /> New vault
           </Button>
         </div>
+        {previousView && (
+          <Button variant="ghost" onClick={cancelSwitch}>
+            Cancel — back to {vaultName(previousView.info.path)}
+          </Button>
+        )}
         {error && (
           <p className="max-w-md text-center text-sm text-destructive">
             {error}
@@ -388,7 +422,14 @@ function App() {
 
   if (locked) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-foreground">
+      <div className="relative flex h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-foreground">
+        <Button
+          variant="ghost"
+          className="absolute top-4 left-4"
+          onClick={() => void switchVault()}
+        >
+          <FolderOpen /> Choose a different vault
+        </Button>
         <Lock className="size-8" />
         <h1 className="text-lg font-semibold">{vaultName(vaultInfo.path)}</h1>
         <p className="text-sm text-muted-foreground">This vault is locked.</p>
@@ -453,6 +494,14 @@ function App() {
               <Lock />
             </Button>
           )}
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Switch vault"
+            onClick={() => void switchVault()}
+          >
+            <FolderOpen />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
