@@ -33,7 +33,7 @@ hkdf = "0.13.0"
 zeroize = "1.9.0"
 getrandom = "0.4.3"
 data-encoding = "2.11.0"
-rusqlite = { version = "0.33", features = ["bundled-sqlcipher"] }
+rusqlite = { version = "0.33", features = ["bundled-sqlcipher-vendored-openssl"] }
 
 [dev-dependencies]
 tempfile = "3"

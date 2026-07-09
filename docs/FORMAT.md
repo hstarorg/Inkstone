@@ -149,7 +149,7 @@ MK ── 派生（HKDF，独立 info 标签）→ 索引加密密钥（用于 S
 
 ### 索引 `.inkstone/index.db`（加密 vault）
 
-- 加密 vault 的 `index.db` 使用 **SQLCipher**（`rusqlite` 的 `bundled-sqlcipher` feature，替换明文 vault 用的 `bundled` feature；两者二选一按 `encryption` 字段在打开 vault 时决定）。
+- `index.db` 统一用 `rusqlite` 的 `bundled-sqlcipher-vendored-openssl` feature 编译（OpenSSL 从源码内置编译，不依赖系统安装，Windows CI 亦可构建）。SQLCipher 编译出的 SQLite 对明文 DB 完全透明兼容——**不是编译期二选一**，而是运行时决定：加密 vault 才在打开连接后执行 `PRAGMA key`，明文 vault 不执行，链接的是同一份二进制。
 - 页加密密钥 = `HKDF-SHA256(ikm=MK, salt=vaultId, info="inkstone-index-key-v1")`，派生 32 字节，vault 解锁后传给 SQLCipher 的 `PRAGMA key`。
 - 明文 vault 的 `index.db` 不变（仍是普通明文 SQLite，`bundled` feature）。
 - 加密 vault 未解锁时，`index.db` 完全不可用（无法列出文档、无法搜索）——这与"文档本体也需要 MK 才能读"一致，不构成新的功能倒退。
