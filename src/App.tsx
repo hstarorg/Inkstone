@@ -5,6 +5,7 @@ import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import {
   FolderOpen,
   FolderPlus,
+  KeyRound,
   Lock,
   Plus,
   Trash2,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 import { RicherEditor, type JSONContent } from "@/components/richer-editor";
 import { SearchPalette } from "@/components/search-palette";
+import { ChangePasswordPanel } from "@/components/change-password-panel";
 import { TrashPanel } from "@/components/trash-panel";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -77,6 +79,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   const [pendingVaultPath, setPendingVaultPath] = useState<string | null>(null);
   const [encryptNewVault, setEncryptNewVault] = useState(false);
@@ -543,6 +546,12 @@ function App() {
           onClose={() => setTrashOpen(false)}
         />
       )}
+      {changePasswordOpen && vault && (
+        <ChangePasswordPanel
+          vault={vault}
+          onClose={() => setChangePasswordOpen(false)}
+        />
+      )}
       <aside className="flex w-60 shrink-0 flex-col border-r bg-sidebar">
         <div className="flex items-center gap-2 px-4 py-3">
           <img src="/logo.svg" alt="" className="size-6 rounded" />
@@ -550,14 +559,24 @@ function App() {
             {vaultName(vaultInfo.path)}
           </span>
           {vaultInfo.encryption !== "none" && (
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Lock vault"
-              onClick={() => void handleLock()}
-            >
-              <Lock />
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Change master password"
+                onClick={() => setChangePasswordOpen(true)}
+              >
+                <KeyRound />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Lock vault"
+                onClick={() => void handleLock()}
+              >
+                <Lock />
+              </Button>
+            </>
           )}
           <Button
             variant="ghost"

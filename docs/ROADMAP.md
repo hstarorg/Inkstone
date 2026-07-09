@@ -153,6 +153,10 @@ MyVault/
 - [ ] **已知缺口**：明文 vault 无法迁移为加密 vault，加密与否只能在创建时选择。计划中的实现方式是"复制到新 vault"（选已有明文 vault + 目标新目录 + 密码，逐篇解密读出、加密写入新目录，旧 vault 原样保留不动，比就地转换更安全）——按需排期
 - [x] `inkstone.json` 自愈备份：每次写入 manifest 时在 `.inkstone/inkstone.json.bak` 同步一份；`open`/`unlock`/`change_password` 发现主文件缺失时先从备份自动恢复再继续。误删 `inkstone.json` 从"永久丢失全部数据"降级为"下次打开自动修复"（双双丢失才是真正不可恢复，边界情况已测试覆盖）
 - [x] 回收站 UI + 删除确认：`docs::list_trash`/`doc_list_trash` 命令列出 `.trash/` 下的文档；侧栏新增"Trash"面板可逐篇 Restore；`trashDoc` 前增加确认弹窗，防止误删无法挽回
+- [x] 新建加密 vault 增加"确认密码"栏：两次密码不一致时禁用创建按钮 + 提交前二次校验，避免密码打错却在创建时无从察觉
+- [x] 应用关闭前强制落盘：监听 Tauri `onCloseRequested`，flush 未写入的防抖编辑后再放行关闭，避免 500ms 防抖窗口内退出丢失最后几次按键
+- [x] 启动自动重开"最近 vault"失败时不再静默吞错误：欢迎屏会显示"Could not reopen your last vault: ..."，而不是一片空白
+- [x] 改密码功能补前端入口：侧栏新增"Change master password"面板（新密码 + 确认二次输入），后端 `vault_change_password` 命令从"实现了但摸不到"变为可用功能
 
 **验收**：加密 vault 的所有文件（文档/资产/索引）用 `xxd` 检视无明文泄漏，Rust 单元测试覆盖（56 个测试含加密路径的明文泄漏检测、manifest 自愈）；错误密码/恢复码有明确报错；改主密码不重写文档本体（只重包裹 MK，`change_password` 已测试验证）。
 
