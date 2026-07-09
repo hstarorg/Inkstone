@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import {
   FolderOpen,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 import { RicherEditor, type JSONContent } from "@/components/richer-editor";
 import { SearchPalette } from "@/components/search-palette";
+import { TrashPanel } from "@/components/trash-panel";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { vaultApi, type DocMeta, type VaultInfo } from "@/lib/vault";
@@ -74,10 +76,12 @@ function App() {
   const [activeDoc, setActiveDoc] = useState<ActiveDoc | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [trashOpen, setTrashOpen] = useState(false);
 
   const [pendingVaultPath, setPendingVaultPath] = useState<string | null>(null);
   const [encryptNewVault, setEncryptNewVault] = useState(false);
   const [newVaultPassword, setNewVaultPassword] = useState("");
+  const [newVaultPasswordConfirm, setNewVaultPasswordConfirm] = useState("");
   const [pendingRecovery, setPendingRecovery] =
     useState<PendingRecovery | null>(null);
 
@@ -116,6 +120,27 @@ function App() {
     }
   }, [vault]);
 
+  // Flush any debounced edit before the window is actually allowed to
+  // close, so quitting right after typing can't drop the last keystrokes.
+  const flushPendingWriteRef = useRef(flushPendingWrite);
+  useEffect(() => {
+    flushPendingWriteRef.current = flushPendingWrite;
+  }, [flushPendingWrite]);
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    void getCurrentWindow()
+      .onCloseRequested(async (event) => {
+        event.preventDefault();
+        await flushPendingWriteRef.current();
+        await getCurrentWindow().destroy();
+      })
+      .then((fn) => {
+        unlisten = fn;
+      });
+    return () => unlisten?.();
+  }, []);
+
   const loadVaultDocs = useCallback(async (info: VaultInfo) => {
     const list = await vaultApi.listDocs(info.path);
     setVaultInfo(info);
@@ -145,7 +170,9 @@ function App() {
     vaultApi
       .recent()
       .then((recent) => (recent ? loadVault(recent) : undefined))
-      .catch(() => {});
+      .catch((recentError) => {
+        setError(`Could not reopen your last vault: ${String(recentError)}`);
+      });
   }, [loadVault]);
 
   const pickVault = async (mode: "open" | "create") => {
@@ -156,6 +183,7 @@ function App() {
       if (mode === "create") {
         setEncryptNewVault(false);
         setNewVaultPassword("");
+        setNewVaultPasswordConfirm("");
         setPendingVaultPath(path);
         return;
       }
@@ -167,6 +195,10 @@ function App() {
 
   const confirmCreateVault = async () => {
     if (!pendingVaultPath) return;
+    if (encryptNewVault && newVaultPassword !== newVaultPasswordConfirm) {
+      setError("Passwords do not match.");
+      return;
+    }
     setError(null);
     try {
       const { info, recoveryCode } = await vaultApi.create(
@@ -175,6 +207,7 @@ function App() {
       );
       setPendingVaultPath(null);
       setNewVaultPassword("");
+      setNewVaultPasswordConfirm("");
       if (recoveryCode) {
         setPendingRecovery({ info, code: recoveryCode });
       } else {
@@ -270,6 +303,11 @@ function App() {
 
   const trashDoc = async (id: string) => {
     if (!vault) return;
+    const doc = docs.find((candidate) => candidate.id === id);
+    const confirmed = window.confirm(
+      `Move "${doc?.title ?? "this document"}" to Trash? You can restore it later from the Trash panel.`,
+    );
+    if (!confirmed) return;
     if (pendingWrite.current?.id === id) {
       clearTimeout(pendingWrite.current.timer);
       pendingWrite.current = null;
@@ -360,14 +398,25 @@ function App() {
           Encrypt this vault with a password
         </label>
         {encryptNewVault && (
-          <input
-            type="password"
-            autoFocus
-            value={newVaultPassword}
-            onChange={(event) => setNewVaultPassword(event.target.value)}
-            placeholder="Master password"
-            className="w-64 rounded-md border bg-transparent px-3 py-1.5 text-sm"
-          />
+          <div className="flex flex-col gap-2">
+            <input
+              type="password"
+              autoFocus
+              value={newVaultPassword}
+              onChange={(event) => setNewVaultPassword(event.target.value)}
+              placeholder="Master password"
+              className="w-64 rounded-md border bg-transparent px-3 py-1.5 text-sm"
+            />
+            <input
+              type="password"
+              value={newVaultPasswordConfirm}
+              onChange={(event) =>
+                setNewVaultPasswordConfirm(event.target.value)
+              }
+              placeholder="Confirm master password"
+              className="w-64 rounded-md border bg-transparent px-3 py-1.5 text-sm"
+            />
+          </div>
         )}
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => setPendingVaultPath(null)}>
@@ -375,7 +424,11 @@ function App() {
           </Button>
           <Button
             onClick={() => void confirmCreateVault()}
-            disabled={encryptNewVault && newVaultPassword.length === 0}
+            disabled={
+              encryptNewVault &&
+              (newVaultPassword.length === 0 ||
+                newVaultPassword !== newVaultPasswordConfirm)
+            }
           >
             Create vault
           </Button>
@@ -478,6 +531,18 @@ function App() {
           onClose={() => setSearchOpen(false)}
         />
       )}
+      {trashOpen && vault && (
+        <TrashPanel
+          vault={vault}
+          onRestored={() => {
+            vaultApi
+              .listDocs(vault)
+              .then((list) => setDocs(list.docs))
+              .catch(() => {});
+          }}
+          onClose={() => setTrashOpen(false)}
+        />
+      )}
       <aside className="flex w-60 shrink-0 flex-col border-r bg-sidebar">
         <div className="flex items-center gap-2 px-4 py-3">
           <img src="/logo.svg" alt="" className="size-6 rounded" />
@@ -501,6 +566,14 @@ function App() {
             onClick={() => void switchVault()}
           >
             <FolderOpen />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Open trash"
+            onClick={() => setTrashOpen(true)}
+          >
+            <Trash2 />
           </Button>
           <Button
             variant="ghost"

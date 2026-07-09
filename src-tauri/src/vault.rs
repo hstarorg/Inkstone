@@ -13,6 +13,7 @@ pub const VAULT_FORMAT_VERSION: u64 = 1;
 const KEYS_FORMAT_VERSION: u64 = 1;
 
 const VAULT_MANIFEST: &str = "inkstone.json";
+const VAULT_MANIFEST_BACKUP: &str = "inkstone.json.bak";
 const SUB_DIRS: [&str; 4] = ["docs", "assets", ".trash", ".inkstone"];
 
 #[derive(Serialize, Clone)]
@@ -88,6 +89,41 @@ fn ensure_layout(root: &Path) -> Result<(), String> {
     Ok(())
 }
 
+/// Writes `inkstone.json` and a same-content backup copy under `.inkstone/`.
+/// The backup is the recovery path if the primary manifest is ever lost
+/// (accidental deletion, filesystem issue): [`heal_manifest_from_backup`]
+/// restores it transparently on the next open/unlock attempt. Losing the
+/// manifest of an *encrypted* vault is otherwise unrecoverable, since it
+/// holds the only wrapped copies of the master key.
+fn write_manifest(root: &Path, manifest: &Value) -> Result<(), String> {
+    let bytes = serde_json::to_string_pretty(manifest)
+        .map_err(|error| error.to_string())?
+        .into_bytes();
+    write_atomic(&root.join(VAULT_MANIFEST), &bytes)?;
+    let backup_dir = root.join(".inkstone");
+    fs::create_dir_all(&backup_dir)
+        .map_err(|error| format!("failed to create .inkstone/: {error}"))?;
+    write_atomic(&backup_dir.join(VAULT_MANIFEST_BACKUP), &bytes)
+}
+
+/// If `inkstone.json` is missing but its backup under `.inkstone/` survives,
+/// restores it before the caller proceeds. A no-op when the manifest is
+/// already present, or when there is no backup to restore from (in which
+/// case the caller's usual "not a vault" error still applies).
+fn heal_manifest_from_backup(root: &Path) -> Result<(), String> {
+    let manifest_path = root.join(VAULT_MANIFEST);
+    if manifest_path.exists() {
+        return Ok(());
+    }
+    let backup_path = root.join(".inkstone").join(VAULT_MANIFEST_BACKUP);
+    if !backup_path.exists() {
+        return Ok(());
+    }
+    let bytes = fs::read(&backup_path)
+        .map_err(|error| format!("failed to read manifest backup: {error}"))?;
+    write_atomic(&manifest_path, &bytes)
+}
+
 fn info_from_manifest(root: &Path, manifest: &Value) -> Result<VaultInfo, String> {
     let manifest_path = root.join(VAULT_MANIFEST);
     let format_version = format_version_of(manifest, &manifest_path)?;
@@ -127,13 +163,8 @@ pub fn create(path: &str) -> Result<VaultInfo, String> {
         "createdAt": now_rfc3339(),
         "encryption": "none",
     });
-    write_atomic(
-        &manifest_path,
-        serde_json::to_string_pretty(&manifest)
-            .map_err(|error| error.to_string())?
-            .as_bytes(),
-    )?;
     ensure_layout(&root)?;
+    write_manifest(&root, &manifest)?;
     info_from_manifest(&root, &manifest)
 }
 
@@ -221,13 +252,8 @@ pub fn create_encrypted(path: &str, password: &str) -> Result<(VaultInfo, String
             },
         },
     });
-    write_atomic(
-        &manifest_path,
-        serde_json::to_string_pretty(&manifest)
-            .map_err(|error| error.to_string())?
-            .as_bytes(),
-    )?;
     ensure_layout(&root)?;
+    write_manifest(&root, &manifest)?;
     let info = info_from_manifest(&root, &manifest)?;
     Ok((info, recovery_code))
 }
@@ -239,6 +265,7 @@ enum UnlockPath {
 
 fn unlock_with(path: &str, secret: &str, which: UnlockPath) -> Result<[u8; MK_LEN], String> {
     let root = PathBuf::from(path);
+    heal_manifest_from_backup(&root)?;
     let manifest_path = root.join(VAULT_MANIFEST);
     let manifest = read_json(&manifest_path)?;
     if manifest.get("encryption").and_then(Value::as_str) != Some("v1") {
@@ -331,6 +358,7 @@ pub fn unlock_with_recovery_code(path: &str, recovery_code: &str) -> Result<[u8;
 /// password). Does not touch the recovery-code envelope or any document.
 pub fn change_password(path: &str, mk: &[u8; MK_LEN], new_password: &str) -> Result<(), String> {
     let root = PathBuf::from(path);
+    heal_manifest_from_backup(&root)?;
     let manifest_path = root.join(VAULT_MANIFEST);
     let mut manifest = read_json(&manifest_path)?;
 
@@ -349,16 +377,12 @@ pub fn change_password(path: &str, mk: &[u8; MK_LEN], new_password: &str) -> Res
         "salt": BASE64.encode(salt),
         "wrappedKey": envelope_to_json(&envelope),
     });
-    write_atomic(
-        &manifest_path,
-        serde_json::to_string_pretty(&manifest)
-            .map_err(|error| error.to_string())?
-            .as_bytes(),
-    )
+    write_manifest(&root, &manifest)
 }
 
 pub fn open(path: &str) -> Result<VaultInfo, String> {
     let root = PathBuf::from(path);
+    heal_manifest_from_backup(&root)?;
     let manifest_path = root.join(VAULT_MANIFEST);
     if !manifest_path.exists() {
         return Err(format!("{} is not an Inkstone vault", root.display()));
@@ -454,6 +478,44 @@ mod tests {
         assert_eq!(opened.format_version, VAULT_FORMAT_VERSION);
         assert!(path.join("docs").is_dir());
         assert!(path.join(".trash").is_dir());
+    }
+
+    #[test]
+    fn open_heals_deleted_manifest_from_backup() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().to_str().unwrap().to_string();
+        let created = create(&path).unwrap();
+
+        fs::remove_file(dir.path().join(VAULT_MANIFEST)).unwrap();
+        assert!(!dir.path().join(VAULT_MANIFEST).exists());
+
+        let healed = open(&path).unwrap();
+        assert_eq!(healed.vault_id, created.vault_id);
+    }
+
+    #[test]
+    fn unlock_heals_deleted_manifest_from_backup() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().to_str().unwrap().to_string();
+        create_encrypted(&path, "correct horse battery staple").unwrap();
+
+        fs::remove_file(dir.path().join(VAULT_MANIFEST)).unwrap();
+
+        // Unlocking (not just opening) must also trigger the heal, since it
+        // reads the manifest independently.
+        assert!(unlock_with_password(&path, "correct horse battery staple").is_ok());
+    }
+
+    #[test]
+    fn open_still_fails_if_both_manifest_and_backup_are_gone() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().to_str().unwrap().to_string();
+        create(&path).unwrap();
+
+        fs::remove_file(dir.path().join(VAULT_MANIFEST)).unwrap();
+        fs::remove_file(dir.path().join(".inkstone").join(VAULT_MANIFEST_BACKUP)).unwrap();
+
+        assert!(open(&path).is_err());
     }
 
     #[test]

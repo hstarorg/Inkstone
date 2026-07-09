@@ -183,6 +183,15 @@ fn doc_list(
 }
 
 #[tauri::command]
+fn doc_list_trash(
+    sessions: tauri::State<session::VaultSessions>,
+    vault: String,
+) -> Result<docs::DocList, String> {
+    let ctx = resolve_context(&sessions, &vault)?;
+    docs::list_trash(&vault, ctx.key.as_ref())
+}
+
+#[tauri::command]
 fn doc_create(
     sessions: tauri::State<session::VaultSessions>,
     vault: String,
@@ -316,6 +325,7 @@ pub fn run() {
             vault_change_password,
             vault_recent,
             doc_list,
+            doc_list_trash,
             doc_create,
             doc_read,
             doc_write,

@@ -56,6 +56,7 @@ export const vaultApi = {
     invoke<void>("vault_change_password", { path, newPassword }),
   recent: () => invoke<string | null>("vault_recent"),
   listDocs: (vault: string) => invoke<DocList>("doc_list", { vault }),
+  listTrash: (vault: string) => invoke<DocList>("doc_list_trash", { vault }),
   createDoc: (vault: string) => invoke<DocFile>("doc_create", { vault }),
   readDoc: (vault: string, id: string) =>
     invoke<DocFile>("doc_read", { vault, id }),

@@ -105,10 +105,9 @@ fn read_doc_bytes(path: &Path, key: Option<&[u8; MK_LEN]>) -> Result<Value, Stri
     }
 }
 
-fn load_validated(vault: &str, id: &str, key: Option<&[u8; MK_LEN]>) -> Result<Value, String> {
-    let path = doc_path(vault, id, key);
-    let doc = read_doc_bytes(&path, key)?;
-    let format_version = format_version_of(&doc, &path)?;
+fn load_validated_at(path: &Path, id: &str, key: Option<&[u8; MK_LEN]>) -> Result<Value, String> {
+    let doc = read_doc_bytes(path, key)?;
+    let format_version = format_version_of(&doc, path)?;
     if format_version > DOC_FORMAT_VERSION {
         return Err(format!(
             "document {id} requires a newer version of Inkstone (formatVersion {format_version})"
@@ -120,10 +119,13 @@ fn load_validated(vault: &str, id: &str, key: Option<&[u8; MK_LEN]>) -> Result<V
     Ok(doc)
 }
 
-pub fn list(vault: &str, key: Option<&[u8; MK_LEN]>) -> Result<DocList, String> {
-    let dir = docs_dir(vault);
+fn load_validated(vault: &str, id: &str, key: Option<&[u8; MK_LEN]>) -> Result<Value, String> {
+    load_validated_at(&doc_path(vault, id, key), id, key)
+}
+
+fn list_dir(dir: &Path, key: Option<&[u8; MK_LEN]>) -> Result<DocList, String> {
     let entries =
-        fs::read_dir(&dir).map_err(|error| format!("failed to read {}: {error}", dir.display()))?;
+        fs::read_dir(dir).map_err(|error| format!("failed to read {}: {error}", dir.display()))?;
 
     let suffix = format!(".{}", extension(key));
     let mut docs = Vec::new();
@@ -135,13 +137,23 @@ pub fn list(vault: &str, key: Option<&[u8; MK_LEN]>) -> Result<DocList, String> 
             continue;
         }
         let id = name.trim_end_matches(&suffix).to_string();
-        match load_validated(vault, &id, key) {
+        match load_validated_at(&path, &id, key) {
             Ok(doc) => docs.push(meta_of(&doc)),
             Err(error) => warnings.push(format!("{}: {error}", path.display())),
         }
     }
     docs.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
     Ok(DocList { docs, warnings })
+}
+
+pub fn list(vault: &str, key: Option<&[u8; MK_LEN]>) -> Result<DocList, String> {
+    list_dir(&docs_dir(vault), key)
+}
+
+/// Lists soft-deleted documents in `.trash/`, so the UI can offer a way to
+/// undo a deletion (see FORMAT.md's soft-delete section).
+pub fn list_trash(vault: &str, key: Option<&[u8; MK_LEN]>) -> Result<DocList, String> {
+    list_dir(&trash_dir(vault), key)
 }
 
 pub fn create(vault: &str, key: Option<&[u8; MK_LEN]>) -> Result<Value, String> {
@@ -308,6 +320,35 @@ mod tests {
 
         restore(&vault, id, None).unwrap();
         assert_eq!(list(&vault, None).unwrap().docs.len(), 1);
+    }
+
+    #[test]
+    fn list_trash_shows_trashed_docs_and_restore_clears_it() {
+        let (_dir, vault) = test_vault();
+        let doc = create(&vault, None).unwrap();
+        let id = doc["id"].as_str().unwrap();
+
+        assert!(list_trash(&vault, None).unwrap().docs.is_empty());
+
+        trash(&vault, id, None).unwrap();
+        let trashed = list_trash(&vault, None).unwrap();
+        assert_eq!(trashed.docs.len(), 1);
+        assert_eq!(trashed.docs[0].id, id);
+
+        restore(&vault, id, None).unwrap();
+        assert!(list_trash(&vault, None).unwrap().docs.is_empty());
+    }
+
+    #[test]
+    fn encrypted_list_trash_shows_trashed_docs() {
+        let (_dir, vault, mk) = test_encrypted_vault();
+        let doc = create(&vault, Some(&mk)).unwrap();
+        let id = doc["id"].as_str().unwrap();
+
+        trash(&vault, id, Some(&mk)).unwrap();
+        let trashed = list_trash(&vault, Some(&mk)).unwrap();
+        assert_eq!(trashed.docs.len(), 1);
+        assert_eq!(trashed.docs[0].id, id);
     }
 
     #[test]
